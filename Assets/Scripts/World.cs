@@ -131,6 +131,7 @@ public class World : MonoBehaviour
             List<int> dims = parseStrings(infos);
             dimensions = dims.ToArray();
 
+            //adding 1s to dimensions list doesn't change array in any way
             dims.Add(1);
 
             //check if dimensions are > 0
