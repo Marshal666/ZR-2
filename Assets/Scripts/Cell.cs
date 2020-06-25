@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-[RequireComponent(typeof(TextMesh))]
 public class Cell : MonoBehaviour
 {
 
@@ -16,27 +15,21 @@ public class Cell : MonoBehaviour
 
     public CellType Type = CellType.Default;
 
-    public int Number = 0;
+    public int Number1 = 0;
 
-    public int TeleportID = -1;
-
-    TextMesh tm;
+    public int Number2 = -1;
 
     private void Awake()
     {
-        tm = GetComponent<TextMesh>();
+        
     }
 
     private void Start()
     {
-        tm = GetComponent<TextMesh>();
+        
     }
 
-    public string Text { get { return tm.text; } set { tm.text = value; } }
-
-    public Color TextColor { get { return tm.color; } set { tm.color = value; } }
-
-    public bool Parse(string s, GameObject o = null)
+    public bool Parse(string s)
     {
 
         if (string.IsNullOrEmpty(s))
@@ -45,7 +38,7 @@ public class Cell : MonoBehaviour
         if (int.TryParse(s, out n))
         {
             Type = CellType.Default;
-            Number = n;
+            Number1 = n;
             return true;
         }
         else
@@ -53,12 +46,10 @@ public class Cell : MonoBehaviour
             switch (s[0])
             {
                 case 'x':
-                    //return new Cell(CellType.Default, 0);
                     Type = CellType.Default;
-                    Number = 0;
+                    Number1 = 0;
                     break;
                 case 's':
-                    //return new Cell(CellType.Start);
                     Type = CellType.Start;
                     break;
                 default:
@@ -70,7 +61,7 @@ public class Cell : MonoBehaviour
 
     public void Redraw()
     {
-        Text = ToString();
+        
     }
 
     public override string ToString()
@@ -78,13 +69,13 @@ public class Cell : MonoBehaviour
         switch (Type)
         {
             case CellType.Default:
-                return Number.ToString();
+                return Number1.ToString();
             case CellType.Start:
                 return "s";
             case CellType.TeleportIn:
-                return "ti" + TeleportID + "," + Number;
+                return "ti" + Number2 + "," + Number1;
             case CellType.TeleportOut:
-                return "to" + TeleportID + "," + Number;
+                return "to" + Number2 + "," + Number1;
             default:
                 return "err";
         }

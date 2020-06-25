@@ -82,7 +82,7 @@ public class World : MonoBehaviour
     void Start()
     {
         //print(Directory.GetCurrentDirectory());
-        print(LoadCells("celltest.txt"));
+        print(LoadLevel("celltest.txt"));
         
     }
 
@@ -119,7 +119,7 @@ public class World : MonoBehaviour
         return r;
     }
 
-    public bool LoadCells(string file)
+    public bool LoadLevel(string file)
     {
         try
         {
@@ -184,7 +184,7 @@ public class World : MonoBehaviour
                 {
 
                     Cells.getCoordsNonAlloc(ci, ref current);
-                    parent.transform.localPosition = -Vector3.up * current[1];
+
 
                     //create all cells for following 1st dimension
                     for (int j = 0; j < dimensions[0]; j++)
@@ -201,21 +201,19 @@ public class World : MonoBehaviour
 
                         //TODO make cell objects the better way
                         Cells.OneDimensional[ci] = cell.AddComponent<Cell>();
-                        Cells.OneDimensional[ci].Parse(cellInfos[ci], cell);
+                        Cells.OneDimensional[ci].Parse(cellInfos[ci]);
 
                         if (Cells.OneDimensional[ci].Type == Cell.CellType.Start)
                             currentPosition = Cells.getCoords(ci);
-                        Cells.OneDimensional[ci].TextColor = defaultCellColor;
-                        Cells.OneDimensional[ci].Redraw();
-
-                        //TODO better positioning for cells and create world with cell objects
-                        Cells.OneDimensional[ci].transform.localPosition = new Vector3(current[0], 0);
 
                         ci++;
 
                     }
                 }
             }
+
+            //hide other worlds (if any)
+            RenderPositionChanges();
 
             //TODO world creation based on cell array?
 
@@ -230,7 +228,14 @@ public class World : MonoBehaviour
             return false;   //fail in loading cells
         }
 
+
+
         return true;    //all job was done
+
+    }
+
+    public void CreateWorld()
+    {
 
     }
 

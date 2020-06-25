@@ -1,0 +1,17 @@
+
+Cell Binary Format: (int cellType, int number1, int number2, int buildingType)
+
+cellTypes:
+	Default
+	Start
+	TeleportIn
+	TeleportOut
+	
+
+number1 - cell life
+	0 - unvisitable
+	[1, IntMax] can be visited
+	-1 - immortal (can always be visited)
+	
+number2 - used in teleports
+	

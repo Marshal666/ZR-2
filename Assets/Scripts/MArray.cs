@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using UnityEngine;
 using System;
 using System.Runtime.CompilerServices;
+using System.Runtime.Serialization;
 
-public class MArray<T> : IEnumerable
+[System.Serializable]
+public class MArray<T> : IEnumerable, ISerializable
 {
 
     int[] dimensions;
@@ -131,6 +133,7 @@ public class MArray<T> : IEnumerable
         return new MArrayEnumerator(this);
     }
 
+
     public class MArrayEnumerator : IEnumerator<T>
     {
 
@@ -165,5 +168,12 @@ public class MArray<T> : IEnumerable
     }
 
     #endregion
+
+    public void GetObjectData(SerializationInfo info, StreamingContext context)
+    {
+        info.AddValue("dimensions", dimensions);
+        info.AddValue("length", length);
+        info.AddValue("arr", arr);
+    }
 
 }
