@@ -42,14 +42,24 @@ public class MArray<T> : IEnumerable, ISerializable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int getIndex(params int[] i)
     {
-        int d = dimensions[i.Length - 1];
+        /*int d = dimensions[i.Length - 1];
         int ti = i[i.Length - 1];
         for (int j = i.Length - 2; j >= 0; j--)
         {
             ti += i[j] * d;
             d *= dimensions[j];
         }
-        return ti;
+        return ti;*/
+        
+        //coords -> index => inx = x0 * d0 + x1 * (d0 * d1) + x2 * (d0 * d1 * d2) + ... + xn * (d0 * d1 * ... * dn), d0 = 1
+        int inx = 0;
+        int product = 1;
+        for(int j = 0; j < i.Length; j++)
+        {
+            inx += product * i[j];
+            product *= dimensions[j];
+        }
+        return inx;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
