@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.IO;
 using System;
+using System.Text.RegularExpressions;
+using System.Linq;
 
 public class World : MonoBehaviour
 {
@@ -18,8 +20,6 @@ public class World : MonoBehaviour
 
     public MArray<Cell> Cells;
 
-    public int[] dimensions;
-
     public DimensionInputs[] dimensionInputs;
 
     public GameObject CellPrefab;
@@ -32,12 +32,17 @@ public class World : MonoBehaviour
 
     public List<Transform> dimensionHolders = new List<Transform>();
 
+    public float buildingDistance = 2.5f;
+
     public void RenderPositionChanges()
     {
 
+        if (dimensionHolders.Count <= 0)
+            return;
+
         Queue<(Transform, int)> q = new Queue<(Transform, int)>();
 
-        (Transform parent, int dim) wo = (dimensionHolders[0], dimensions.Length - 1);
+        (Transform parent, int dim) wo = (dimensionHolders[0], Cells.Dimensions.Length - 1);
 
 
         //optimizable?, instead of enabling some and then disabling all objects, disable current active ones and just enable required ones
@@ -69,13 +74,43 @@ public class World : MonoBehaviour
     bool MakeMove(int dim, int direction)
     {
 
-        //print("Move: " + string.Join(", ", direction));
+        //check if given dimensions is in level dim bounds
+        if (dim >= Cells.Dimensions.Length || dim < 0)
+            return false;
 
-        currentPosition[dim] += direction;
+        int dt = currentPosition[dim] + direction;
 
-        RenderPositionChanges();
+        if (dt >= 0 && dt < Cells.Dimensions[dim])
+        {
 
-        return true;
+            //remember old position for case if cell cannot be visited
+            int old = currentPosition[dim];
+            currentPosition[dim] = dt;
+
+            //print("Move: " + string.Join(", ", currentPosition) + " " + Cells[currentPosition].name + " i: " + Cells.getIndex(currentPosition));
+
+            //empty cells cannot be visited
+            if (Cells[currentPosition].data.Number1 > 0)
+            {
+
+                Cells[currentPosition].data.Number1--;
+                Cells[currentPosition].Redraw();
+
+                RenderPositionChanges();
+
+                return true;
+
+            } else
+            {
+
+                //cell cannot be visited - rollback
+                currentPosition[dim] = old;
+
+            }
+
+        }
+
+        return false;
     }
 
     // Start is called before the first frame update
@@ -129,7 +164,11 @@ public class World : MonoBehaviour
             string[] infos = r.ReadLine().Split(separators, StringSplitOptions.RemoveEmptyEntries);
 
             List<int> dims = parseStrings(infos);
-            dimensions = dims.ToArray();
+            int[] dimensions = dims.ToArray();
+
+#if UNITY_EDITOR
+            print(string.Join(", ", dimensions));
+#endif
 
             //adding 1s to dimensions list doesn't change array in any way
             dims.Add(1);
@@ -149,7 +188,11 @@ public class World : MonoBehaviour
 
             currentPosition = new int[dimensions.Length];
 
-            string[] cellInfos = r.ReadToEnd().Split(separators, StringSplitOptions.RemoveEmptyEntries);
+            string cellInfosTxt = r.ReadToEnd();
+
+            //get all cell infos using regex for "(...) (...)..."
+            Regex regx = new Regex(@"\(.+?\)", RegexOptions.Multiline);
+            Match mt = regx.Match(cellInfosTxt);
 
             //dimension holders array and starting object
             dimensionHolders.Clear();
@@ -185,25 +228,32 @@ public class World : MonoBehaviour
 
                     Cells.getCoordsNonAlloc(ci, ref current);
 
+                    parent.transform.localPosition = Vector3.forward * current[1] * buildingDistance;
 
                     //create all cells for following 1st dimension
                     for (int j = 0; j < dimensions[0]; j++)
                     {
 
+                        //parse cell data
+                        CellData data = CellData.Parse(mt.Value);
+                        mt = mt.NextMatch();
+
                         Cells.getCoordsNonAlloc(ci, ref current);
                         
                         GameObject cell = Instantiate(CellPrefab);
                         cell.name = "Cell" + (dinx[dimindex]++);
+                        
 
                         Transform cellTransform = cell.transform;
 
                         cellTransform.SetParent(parent);
+                        cell.transform.localPosition = Vector3.right * j * buildingDistance;
 
-                        //TODO make cell objects the better way
                         Cells.OneDimensional[ci] = cell.AddComponent<Cell>();
-                        Cells.OneDimensional[ci].Parse(cellInfos[ci]);
+                        Cells.OneDimensional[ci].data = data;
+                        Cells.OneDimensional[ci].Draw();
 
-                        if (Cells.OneDimensional[ci].Type == Cell.CellType.Start)
+                        if (Cells.OneDimensional[ci].data.Type == CellData.CellType.Start)
                             currentPosition = Cells.getCoords(ci);
 
                         ci++;
@@ -215,7 +265,8 @@ public class World : MonoBehaviour
             //hide other worlds (if any)
             RenderPositionChanges();
 
-            //TODO world creation based on cell array?
+            //create world around cells
+            CreateWorld();
 
 
         } catch (Exception e)
@@ -236,6 +287,11 @@ public class World : MonoBehaviour
 
     public void CreateWorld()
     {
+        if (dimensionHolders.Count <= 0)
+            return;
+
+        //TODO: generate road and terrain around buildings
+        
 
     }
 
