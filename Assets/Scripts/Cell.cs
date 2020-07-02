@@ -1,23 +1,14 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using System.Text;
+using System.Text.RegularExpressions;
 using UnityEngine;
 
 public class Cell : MonoBehaviour
 {
 
-    public enum CellType
-    {
-        Default,
-        Start,
-        TeleportIn,
-        TeleportOut
-    }
-
-    public CellType Type = CellType.Default;
-
-    public int Number1 = 0;
-
-    public int Number2 = -1;
+    public CellData data;
 
     private void Awake()
     {
@@ -29,55 +20,46 @@ public class Cell : MonoBehaviour
         
     }
 
-    public bool Parse(string s)
+    /// <summary>
+    /// Draws cell objects
+    /// </summary>
+    public void Draw()
     {
+        switch (data.Type)
+        {
+            case CellData.CellType.Default:
+                for (int i = 0; i < data.Number1; i++)
+                {
+                    GameObject g = Instantiate(GameData.BuildingBlocks[data.BuildingType]);
+                    g.transform.SetParent(transform);
+                    g.transform.localPosition = Vector3.up * i;
+                }
 
-        if (string.IsNullOrEmpty(s))
-            return false;
-        int n;
-        if (int.TryParse(s, out n))
-        {
-            Type = CellType.Default;
-            Number1 = n;
-            return true;
-        }
-        else
-        {
-            switch (s[0])
-            {
-                case 'x':
-                    Type = CellType.Default;
-                    Number1 = 0;
-                    break;
-                case 's':
-                    Type = CellType.Start;
-                    break;
-                default:
-                    return false;
-            }
-            return true;
+                break;
+            case CellData.CellType.Start:
+                break;
+            case CellData.CellType.TeleportIn:
+                break;
+            case CellData.CellType.TeleportOut:
+                break;
+            default:
+                break;
         }
     }
 
+    /// <summary>
+    /// Expects that cell was already drawn, redraws it according to current state
+    /// </summary>
     public void Redraw()
     {
-        
-    }
-
-    public override string ToString()
-    {
-        switch (Type)
+        if(transform.childCount > data.Number1)
         {
-            case CellType.Default:
-                return Number1.ToString();
-            case CellType.Start:
-                return "s";
-            case CellType.TeleportIn:
-                return "ti" + Number2 + "," + Number1;
-            case CellType.TeleportOut:
-                return "to" + Number2 + "," + Number1;
-            default:
-                return "err";
+            int diff = transform.childCount - data.Number1;
+            for(int j = transform.childCount - 1; j >= 0 && diff > 0; j--, diff--)
+            {
+                GameObject o = transform.GetChild(j).gameObject;
+                o.SetActive(false);
+            }
         }
     }
 
