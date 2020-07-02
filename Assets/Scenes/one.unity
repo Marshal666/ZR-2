@@ -215,6 +215,7 @@ GameObject:
   m_Component:
   - component: {fileID: 299506364}
   - component: {fileID: 299506363}
+  - component: {fileID: 299506365}
   m_Layer: 0
   m_Name: World
   m_TagString: Untagged
@@ -229,13 +230,12 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 299506362}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0921e4459aa15d045899a8f92f3f8614, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   rootObject: {fileID: 1144161730}
-  dimensions: 
   dimensionInputs:
   - positive: 100
     negative: 97
@@ -254,6 +254,7 @@ MonoBehaviour:
   currentPosition: 
   sum: 0
   dimensionHolders: []
+  buildingDistance: 2.5
 --- !u!4 &299506364
 Transform:
   m_ObjectHideFlags: 0
@@ -268,6 +269,18 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &299506365
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 299506362}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3f0937b1d6a37e34e9eddf9aa74624cc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1085571871
 GameObject:
   m_ObjectHideFlags: 0
