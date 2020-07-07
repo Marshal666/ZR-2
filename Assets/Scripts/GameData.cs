@@ -11,6 +11,10 @@ public class GameData : MonoBehaviour
 
     public static List<GameObject> BuildingBlocks { get { return main.buildingBlocks; } }
 
+    public Material roadMaterial;
+
+    public static Material RoadMaterial {  get { return main.roadMaterial; } }
+
     private void Awake()
     {
         main = this;
