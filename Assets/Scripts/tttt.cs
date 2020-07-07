@@ -19,6 +19,14 @@ public class tttt : MonoBehaviour
     */
     #endregion
 
+    #region ROADGEN
+    /*
+    public int width = 2, height = 2;
+    public float distance = 0.5f, depth = 0.1f;
+    public int roadCount = 2;
+    */
+    #endregion
+
     // Start is called before the first frame update
     void Start()
     {
@@ -180,13 +188,6 @@ public class tttt : MonoBehaviour
         print(dt.ToString());*/
         #endregion
 
-        #region ROADGEN
-
-        GameObject g = new GameObject();
-        g.AddComponent<MeshFilter>().mesh = RoadGenerator.GenerateRoadGrid(1, 1);
-        g.AddComponent<MeshRenderer>();
-
-        #endregion
     }
 
     private void Update()
@@ -224,6 +225,18 @@ public class tttt : MonoBehaviour
                 print("Move: " + string.Join(", ", pos) + " i: " + arr.getIndex(pos));
             }
         }*/
+        #endregion
+
+        #region ROADGEN
+        /*
+        if (Input.GetKeyDown(KeyCode.G))
+        {
+
+            Scene.ClearRoot();
+            //road dims = world_dims / 2 + (1, 1)
+            RoadGenerator.MakeRoad(width, height, distance, depth, roadCount);
+        }
+        */
         #endregion
 
     }
