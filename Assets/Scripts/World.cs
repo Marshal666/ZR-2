@@ -16,8 +16,6 @@ public class World : MonoBehaviour
         public KeyCode negative;
     }
 
-    public Transform rootObject;
-
     public MArray<Cell> Cells;
 
     public DimensionInputs[] dimensionInputs;
@@ -33,6 +31,10 @@ public class World : MonoBehaviour
     public List<Transform> dimensionHolders = new List<Transform>();
 
     public float buildingDistance = 2.5f;
+
+    GameObject player;
+
+    public static World main;
 
     public void RenderPositionChanges()
     {
@@ -68,6 +70,7 @@ public class World : MonoBehaviour
             }
         }
 
+        PositionPlayer();
 
     }
 
@@ -90,10 +93,10 @@ public class World : MonoBehaviour
             //print("Move: " + string.Join(", ", currentPosition) + " " + Cells[currentPosition].name + " i: " + Cells.getIndex(currentPosition));
 
             //empty cells cannot be visited
-            if (Cells[currentPosition].data.Number1 > 0)
+            if (Cells[currentPosition].Data.Number1 > 0)
             {
 
-                Cells[currentPosition].data.Number1--;
+                Cells[currentPosition].Data.Number1--;
                 Cells[currentPosition].Redraw();
 
                 RenderPositionChanges();
@@ -113,9 +116,17 @@ public class World : MonoBehaviour
         return false;
     }
 
+    private void Awake()
+    {
+        main = this;
+    }
+
     // Start is called before the first frame update
     void Start()
     {
+
+        player = Scene.PlayerObject;
+
         //print(Directory.GetCurrentDirectory());
         print(LoadLevel("celltest.txt"));
         
@@ -197,7 +208,7 @@ public class World : MonoBehaviour
             //dimension holders array and starting object
             dimensionHolders.Clear();
             dimensionHolders.Add(new GameObject("World Objects").transform);
-            dimensionHolders[dimensionHolders.Count - 1].SetParent(rootObject);
+            dimensionHolders[dimensionHolders.Count - 1].SetParent(Scene.RootTransform);
 
             //create dimension holder for every dimension > 1, non recursive
             Queue<(int dimindex, Transform parent)> qq = new Queue<(int, Transform)>(64);
@@ -228,7 +239,8 @@ public class World : MonoBehaviour
 
                     Cells.getCoordsNonAlloc(ci, ref current);
 
-                    parent.transform.localPosition = Vector3.forward * current[1] * buildingDistance;
+                    if (current.Length > 1)
+                        parent.transform.localPosition = Vector3.forward * current[1] * buildingDistance;
 
                     //create all cells for following 1st dimension
                     for (int j = 0; j < dimensions[0]; j++)
@@ -250,10 +262,10 @@ public class World : MonoBehaviour
                         cell.transform.localPosition = Vector3.right * j * buildingDistance;
 
                         Cells.OneDimensional[ci] = cell.AddComponent<Cell>();
-                        Cells.OneDimensional[ci].data = data;
+                        Cells.OneDimensional[ci].Data = data;
                         Cells.OneDimensional[ci].Draw();
 
-                        if (Cells.OneDimensional[ci].data.Type == CellData.CellType.Start)
+                        if (Cells.OneDimensional[ci].Data.Type == CellData.CellType.Start)
                             currentPosition = Cells.getCoords(ci);
 
                         ci++;
@@ -279,10 +291,15 @@ public class World : MonoBehaviour
             return false;   //fail in loading cells
         }
 
-
+        PositionPlayer();
 
         return true;    //all job was done
 
+    }
+
+    public void PositionPlayer()
+    {
+        Scene.Player.Reposition();
     }
 
     public void CreateWorld()
@@ -291,8 +308,8 @@ public class World : MonoBehaviour
             return;
 
         //TODO: generate road and terrain around buildings
-        
 
+        //RoadGenerator.MakeRoad(Cells.Dimensions[0], Cells.Dimensions.Length > 1 ? Cells.Dimensions[1] : 1, buildingDistance);
     }
 
 }
