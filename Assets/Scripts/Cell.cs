@@ -8,7 +8,7 @@ using UnityEngine;
 public class Cell : MonoBehaviour
 {
 
-    public CellData data;
+    public CellData Data;
 
     private void Awake()
     {
@@ -25,12 +25,12 @@ public class Cell : MonoBehaviour
     /// </summary>
     public void Draw()
     {
-        switch (data.Type)
+        switch (Data.Type)
         {
             case CellData.CellType.Default:
-                for (int i = 0; i < data.Number1; i++)
+                for (int i = 0; i < Data.Number1; i++)
                 {
-                    GameObject g = Instantiate(GameData.BuildingBlocks[data.BuildingType]);
+                    GameObject g = Instantiate(GameData.BuildingBlocks[Data.BuildingType]);
                     g.transform.SetParent(transform);
                     g.transform.localPosition = Vector3.up * i;
                 }
@@ -52,9 +52,9 @@ public class Cell : MonoBehaviour
     /// </summary>
     public void Redraw()
     {
-        if(transform.childCount > data.Number1)
+        if(transform.childCount > Data.Number1)
         {
-            int diff = transform.childCount - data.Number1;
+            int diff = transform.childCount - Data.Number1;
             for(int j = transform.childCount - 1; j >= 0 && diff > 0; j--, diff--)
             {
                 GameObject o = transform.GetChild(j).gameObject;
