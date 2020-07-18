@@ -23,6 +23,10 @@ public class Scene : MonoBehaviour
 
     public static Player Player { get { return main.playerC; } }
 
+    EventSystem es;
+
+    public static EventSystem EventSystem { get { return main.es; } }
+
     private void Awake()
     {
         main = this;
@@ -51,6 +55,8 @@ public class Scene : MonoBehaviour
 
         playerC = player.GetComponent<Player>();
 
+        es = new EventSystem();
+
     }
 
     // Start is called before the first frame update
@@ -62,7 +68,15 @@ public class Scene : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-         
+        if(InputMapper.main.Undo)
+        {
+            es.Undo();
+        }
+
+        if(InputMapper.main.Redo)
+        {
+            es.Redo();
+        }
     }
 
     public static void ClearRoot()
