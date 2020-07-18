@@ -52,15 +52,13 @@ public class Cell : MonoBehaviour
     /// </summary>
     public void Redraw()
     {
-        if(transform.childCount > Data.Number1)
+
+        for(int i = 0; i < transform.childCount; i++)
         {
-            int diff = transform.childCount - Data.Number1;
-            for(int j = transform.childCount - 1; j >= 0 && diff > 0; j--, diff--)
-            {
-                GameObject o = transform.GetChild(j).gameObject;
-                o.SetActive(false);
-            }
+            GameObject o = transform.GetChild(i).gameObject;
+            o.SetActive(i < Data.Number1);
         }
+
     }
 
 }
