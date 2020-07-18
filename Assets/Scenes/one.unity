@@ -235,22 +235,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0921e4459aa15d045899a8f92f3f8614, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  dimensionInputs:
-  - positive: 100
-    negative: 97
-  - positive: 119
-    negative: 115
-  - positive: 101
-    negative: 113
-  - positive: 116
-    negative: 122
-  - positive: 0
-    negative: 0
   CellPrefab: {fileID: 6654715056458066228, guid: 81e99f94544f2e5448fb2098de88d338,
     type: 3}
   defaultCellColor: {r: 1, g: 1, b: 1, a: 1}
   currentCellColor: {r: 0, g: 1, b: 0, a: 1}
-  currentPosition: 
   sum: 0
   dimensionHolders: []
   buildingDistance: 2.5
@@ -383,6 +371,7 @@ GameObject:
   - component: {fileID: 1144161730}
   - component: {fileID: 1144161731}
   - component: {fileID: 1144161732}
+  - component: {fileID: 1144161733}
   m_Layer: 0
   m_Name: Root
   m_TagString: Untagged
@@ -432,6 +421,31 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   root: {fileID: 1144161729}
+  player: {fileID: 0}
+--- !u!114 &1144161733
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1144161729}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f63f5da5494517d4ea349258f9986465, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  dimensionInputs:
+  - positive: 100
+    negative: 97
+  - positive: 119
+    negative: 115
+  - positive: 101
+    negative: 113
+  - positive: 116
+    negative: 122
+  moveDimension: 
+  Undo: 0
+  Redo: 0
 --- !u!1 &1219461824
 GameObject:
   m_ObjectHideFlags: 0
@@ -569,3 +583,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d49614cbd58613c4eaf0f941b840c8d5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  currentPosition: 
