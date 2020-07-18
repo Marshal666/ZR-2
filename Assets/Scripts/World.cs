@@ -9,22 +9,11 @@ using System.Linq;
 public class World : MonoBehaviour
 {
 
-    [System.Serializable]
-    public struct DimensionInputs
-    {
-        public KeyCode positive;
-        public KeyCode negative;
-    }
-
-    public MArray<Cell> Cells;
-
-    public DimensionInputs[] dimensionInputs;
+    public MArray<Cell> Cells;    
 
     public GameObject CellPrefab;
 
     public Color defaultCellColor = Color.white, currentCellColor = Color.green;
-
-    public int[] currentPosition;
 
     public int sum;
 
@@ -59,7 +48,7 @@ public class World : MonoBehaviour
                 for(int i = 0; i < parent.childCount; i++)
                 {
                     q.Enqueue((parent.GetChild(i), dim - 1));
-                    if(currentPosition[dim] == i)
+                    if(Scene.Player.currentPosition[dim] == i)
                     {
                         parent.GetChild(i).gameObject.SetActive(true);
                     } else
@@ -74,47 +63,7 @@ public class World : MonoBehaviour
 
     }
 
-    bool MakeMove(int dim, int direction)
-    {
-
-        //check if given dimensions is in level dim bounds
-        if (dim >= Cells.Dimensions.Length || dim < 0)
-            return false;
-
-        int dt = currentPosition[dim] + direction;
-
-        if (dt >= 0 && dt < Cells.Dimensions[dim])
-        {
-
-            //remember old position for case if cell cannot be visited
-            int old = currentPosition[dim];
-            currentPosition[dim] = dt;
-
-            //print("Move: " + string.Join(", ", currentPosition) + " " + Cells[currentPosition].name + " i: " + Cells.getIndex(currentPosition));
-
-            //empty cells cannot be visited
-            if (Cells[currentPosition].Data.Number1 > 0)
-            {
-
-                Cells[currentPosition].Data.Number1--;
-                Cells[currentPosition].Redraw();
-
-                RenderPositionChanges();
-
-                return true;
-
-            } else
-            {
-
-                //cell cannot be visited - rollback
-                currentPosition[dim] = old;
-
-            }
-
-        }
-
-        return false;
-    }
+    
 
     private void Awake()
     {
@@ -130,27 +79,6 @@ public class World : MonoBehaviour
         //print(Directory.GetCurrentDirectory());
         print(LoadLevel("celltest.txt"));
         
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-
-        //check for moves between dimensions
-
-        for(int i = 0; i < dimensionInputs.Length; i++)
-        {
-            if (Input.GetKeyDown(dimensionInputs[i].positive))
-            {
-                MakeMove(i, 1);
-            }
-            else if (Input.GetKeyDown(dimensionInputs[i].negative))
-            {
-                MakeMove(i, -1);
-            }
-
-        }
-
     }
 
     static readonly char[] separators = { ' ', '\t', '\n', '\r' };
@@ -197,7 +125,7 @@ public class World : MonoBehaviour
 
             int[] current = new int[dimensions.Length];
 
-            currentPosition = new int[dimensions.Length];
+            Scene.Player.currentPosition = new int[dimensions.Length];
 
             string cellInfosTxt = r.ReadToEnd();
 
@@ -266,7 +194,7 @@ public class World : MonoBehaviour
                         Cells.OneDimensional[ci].Draw();
 
                         if (Cells.OneDimensional[ci].Data.Type == CellData.CellType.Start)
-                            currentPosition = Cells.getCoords(ci);
+                            Scene.Player.currentPosition = Cells.getCoords(ci);
 
                         ci++;
 
