@@ -27,6 +27,93 @@ public class tttt : MonoBehaviour
     */
     #endregion
 
+    #region EVENTSYSTEST
+    /*
+    class asd : IGameEvent
+    {
+
+
+        static int count = 0;
+
+        int a;
+
+        bool e = true;
+
+        public asd()
+        {
+            a = count++;
+        }
+
+        public void Execute()
+        {
+            e = true;
+        }
+
+        public void Revert()
+        {
+            e = false;
+        }
+
+        public override string ToString()
+        {
+            return "e" + a.ToString() + (e ? "e" : "f");
+        }
+    }
+    */
+    #endregion
+
+    #region SCENEVENTSYSTT
+    /*
+    public static string str = "";
+
+    public class addA : IGameEvent
+    {
+
+        GameEventExecutionResult res = GameEventExecutionResult.Success;
+
+        public addA()
+        {
+            Execute();
+        }
+
+        public GameEventExecutionResult result { get { return res; } }
+
+        public void Execute()
+        {
+            str += "A";
+        }
+
+        public void Revert()
+        {
+            str = str.Remove(str.Length - 1, 1);
+        }
+    }
+
+    public class addB : IGameEvent
+    {
+
+        GameEventExecutionResult res = GameEventExecutionResult.Success;
+
+        public addB()
+        {
+            Execute();
+        }
+
+        public GameEventExecutionResult result { get { return res; } }
+
+        public void Execute()
+        {
+            str += "B";
+        }
+
+        public void Revert()
+        {
+            str = str.Remove(str.Length - 1, 1);
+        }
+    }
+    */
+    #endregion
+
     // Start is called before the first frame update
     void Start()
     {
@@ -188,6 +275,51 @@ public class tttt : MonoBehaviour
         print(dt.ToString());*/
         #endregion
 
+        #region EVENTTEST
+        /*
+        Stack<IEvent> se = new Stack<IEvent>();
+
+        se.Push(new Player.PlayerMove());
+        se.Peek().Execute();
+        se.Push(new Player.PlayerMove());
+        se.Peek().Execute();
+
+        while (se.Count > 0)
+        {
+            se.Pop().Revert();
+        }
+        */
+        #endregion
+
+        #region EVENTSYSTEST
+        /*
+        EventSystem es = new EventSystem(8);
+
+        string t = "aarrraarrrraauuauuuuuaurrraauuuurauu" + "aaaaauururuauraurauaruaruaaarruurrrrurruruuraarurrrrrruuuuaaaaaarrrrururuauauruaruaauuauauuauuruuauaaaaruurrrruuuruurrruuuuuuuuaauuuuuuuuuuuuuuaaaauuuururrruaauauruauruarururuaa";
+
+        for(int i = 0; i < t.Length; i++)
+        {
+            if(t[i] == 'a')
+            {
+                es.AddEvent(new asd());
+            }
+
+            if(t[i] == 'u')
+            {
+                es.Undo();
+            }
+            
+            if(t[i] == 'r')
+            {
+                es.Redo();
+            }
+
+            print(es.ToString());
+        }
+
+       */
+        #endregion
+
     }
 
     private void Update()
@@ -237,6 +369,20 @@ public class tttt : MonoBehaviour
             RoadGenerator.MakeRoad(width, height, distance, depth, roadCount);
         }
         */
+        #endregion
+        
+        #region SCENEVENTSYSTT
+        /*
+        if(Input.GetKeyDown(KeyCode.A))
+        {
+            Scene.EventSystem.AddEvent(new addA());
+            print(str);
+        }
+        if (Input.GetKeyDown(KeyCode.B))
+        {
+            Scene.EventSystem.AddEvent(new addB());
+            print(str);
+        }*/
         #endregion
 
     }
