@@ -5,6 +5,16 @@ using UnityEngine;
 public class Player : MonoBehaviour
 {
 
+    public enum PlayerStates
+    {
+        Playing,
+        Won,
+        Lost,
+        NonPlaying
+    }
+
+    public StateMachine<PlayerStates> PlayerState;
+
     public int[] currentPosition;
 
     #region EVENTCLASSES
@@ -22,7 +32,7 @@ public class Player : MonoBehaviour
         {
 
             res = GameEventExecutionResult.Failed;
-            
+
             this.dimension = dimension;
             this.direction = direction;
 
@@ -60,11 +70,12 @@ public class Player : MonoBehaviour
             //reverse cell visit effects
             w.Cells[player.currentPosition].Data.Number1++;
             w.Cells[player.currentPosition].Redraw();
+            w.Sum++;
             w.RenderPositionChanges();
 
             //move player to old position
-            player.currentPosition[dimension] -= direction; 
-            
+            player.currentPosition[dimension] -= direction;
+
             //reposition the player to old position
             if (w.Cells != null && player.currentPosition.Length > 0)
             {
@@ -73,6 +84,23 @@ public class Player : MonoBehaviour
 
         }
 
+    }
+
+    #endregion
+
+    #region STATE_METHODS
+
+    void Playing()
+    {
+        //check for moves between dimensions
+
+        for (int i = 0; i < InputMapper.main.moveDimension.Length; i++)
+        {
+            if (InputMapper.main.moveDimension[i] != 0)
+            {
+                Scene.EventSystem.AddEvent(new PlayerMove(this, i, InputMapper.main.moveDimension[i]));
+            }
+        }
     }
 
     #endregion
@@ -103,6 +131,7 @@ public class Player : MonoBehaviour
 
                 World.main.Cells[currentPosition].Data.Number1--;
                 World.main.Cells[currentPosition].Redraw();
+                World.main.Sum--;
 
                 World.main.RenderPositionChanges();
 
@@ -133,6 +162,17 @@ public class Player : MonoBehaviour
         transform.position = newPlayerPos;
     }
 
+
+    private void Awake()
+    {
+        //playing at start for now
+        PlayerState = new StateMachine<PlayerStates>(PlayerStates.Playing);
+
+        //assign methods from sm
+        PlayerState.Methods[PlayerStates.Playing] = Playing;
+
+    }
+
     // Start is called before the first frame update
     void Start()
     {
@@ -143,15 +183,7 @@ public class Player : MonoBehaviour
     void Update()
     {
 
-        //check for moves between dimensions
-
-        for (int i = 0; i < InputMapper.main.moveDimension.Length; i++)
-        {
-            if(InputMapper.main.moveDimension[i] != 0)
-            {
-                Scene.EventSystem.AddEvent(new PlayerMove(this, i, InputMapper.main.moveDimension[i]));
-            }
-        }
+        PlayerState.Execute();
 
     }
 
