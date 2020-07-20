@@ -9,17 +9,24 @@ using System.Linq;
 public class World : MonoBehaviour
 {
 
-    public MArray<Cell> Cells;    
+    public enum GameTypes
+    {
+        SumToZero,
+        ReachPoints,
+        //.... add more?
+    }
+
+    public MArray<Cell> Cells;
+
+    public GameTypes GameType = GameTypes.SumToZero;
 
     public GameObject CellPrefab;
-
-    public Color defaultCellColor = Color.white, currentCellColor = Color.green;
-
-    public int sum;
 
     public List<Transform> dimensionHolders = new List<Transform>();
 
     public float buildingDistance = 2.5f;
+
+    public int Sum = 0;
 
     GameObject player;
 
@@ -150,6 +157,8 @@ public class World : MonoBehaviour
             //index of current cell for reading cell info from file
             int ci = 0;
 
+            Sum = 0;
+
             while (qq.Count != 0)
             {
                 (int dimindex, Transform parent) = qq.Dequeue();
@@ -192,6 +201,8 @@ public class World : MonoBehaviour
                         Cells.OneDimensional[ci] = cell.AddComponent<Cell>();
                         Cells.OneDimensional[ci].Data = data;
                         Cells.OneDimensional[ci].Draw();
+
+                        Sum += Cells.OneDimensional[ci].Data.Number1;
 
                         if (Cells.OneDimensional[ci].Data.Type == CellData.CellType.Start)
                             Scene.Player.currentPosition = Cells.getCoords(ci);
