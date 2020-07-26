@@ -18,6 +18,8 @@ public class World : MonoBehaviour
 
     public MArray<Cell> Cells;
 
+    public int[][] CellGroups;
+
     public GameTypes GameType = GameTypes.SumToZero;
 
     public GameObject CellPrefab;
@@ -28,9 +30,11 @@ public class World : MonoBehaviour
 
     public int Sum = 0;
 
-    GameObject player;
+    public int ReachCellSum = 0;
 
     public static World main;
+
+    public Vector3 WorldCenter { get { return new Vector3(Cells.Dimensions[0] - 1, 0f, (Cells.Dimensions.Length > 1 ? Cells.Dimensions[1] - 1 : 0f)) * buildingDistance / 2f; } }
 
     public void RenderPositionChanges()
     {
@@ -81,8 +85,6 @@ public class World : MonoBehaviour
     void Start()
     {
 
-        player = Scene.PlayerObject;
-
         //print(Directory.GetCurrentDirectory());
         print(LoadLevel("celltest.txt"));
         
@@ -107,14 +109,35 @@ public class World : MonoBehaviour
 
             StreamReader r = new StreamReader(file);
 
+            string gameTypeString = r.ReadLine();
+
+            GameType = (GameTypes)Enum.Parse(typeof(GameTypes), gameTypeString);
+
+            string gameGroupCountString = r.ReadLine();
+
+            int gameGroupCount = int.Parse(gameGroupCountString);
+
+            CellGroups = new int[gameGroupCount][];
+
+            char[] delims = {',', ' ', '\t', '\r', '{', '}'};
+
+            for (int i = 0; i < gameGroupCount; i++)
+            {
+                string listLine = r.ReadLine();
+                string[] cellsIn = listLine.Split(delims, StringSplitOptions.RemoveEmptyEntries);
+                CellGroups[i] = new int[cellsIn.Length];
+                for(int j = 0; j < CellGroups[i].Length; j++)
+                {
+                    CellGroups[i][j] = int.Parse(cellsIn[j]);
+                }
+            }
+
             string[] infos = r.ReadLine().Split(separators, StringSplitOptions.RemoveEmptyEntries);
 
             List<int> dims = parseStrings(infos);
             int[] dimensions = dims.ToArray();
 
-#if UNITY_EDITOR
-            print(string.Join(", ", dimensions));
-#endif
+            //print(string.Join(", ", dimensions));
 
             //adding 1s to dimensions list doesn't change array in any way
             dims.Add(1);
@@ -158,6 +181,7 @@ public class World : MonoBehaviour
             int ci = 0;
 
             Sum = 0;
+            ReachCellSum = 0;
 
             while (qq.Count != 0)
             {
@@ -202,7 +226,22 @@ public class World : MonoBehaviour
                         Cells.OneDimensional[ci].Data = data;
                         Cells.OneDimensional[ci].Draw();
 
-                        Sum += Cells.OneDimensional[ci].Data.Number1;
+                        switch (GameType)
+                        {
+                            case GameTypes.SumToZero:
+                                if (Cells.OneDimensional[ci].Data.Number1 > 0 && Cells.OneDimensional[ci].Data.Type != CellData.CellType.ReachCell)
+                                    Sum += Cells.OneDimensional[ci].Data.Number1;
+                                break;
+                            case GameTypes.ReachPoints:
+                                if (Cells.OneDimensional[ci].Data.Type == CellData.CellType.ReachCell)
+                                    ReachCellSum += Cells.OneDimensional[ci].Data.Number1;
+                                break;
+                            default:
+                                break;
+                        }
+                        
+
+
 
                         if (Cells.OneDimensional[ci].Data.Type == CellData.CellType.Start)
                             Scene.Player.currentPosition = Cells.getCoords(ci);
