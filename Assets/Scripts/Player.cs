@@ -13,6 +13,14 @@ public class Player : MonoBehaviour
         NonPlaying
     }
 
+    //info for events about player moves
+    public class PlayerMoveInfo
+    {
+
+        public List<int> ExCells = new List<int>();
+
+    }
+
     public StateMachine<PlayerStates> PlayerState;
 
     public int[] currentPosition;
@@ -28,6 +36,8 @@ public class Player : MonoBehaviour
 
         GameEventExecutionResult res;
 
+        PlayerMoveInfo info;
+
         public PlayerMove(Player player, int dimension, int direction)
         {
 
@@ -37,6 +47,8 @@ public class Player : MonoBehaviour
             this.direction = direction;
 
             this.player = player;
+
+            info = new PlayerMoveInfo();
 
             Execute();
 
@@ -48,7 +60,7 @@ public class Player : MonoBehaviour
         {
 
             //crucial part is if player can make a move
-            res = player.MakeMove(dimension, direction) ? GameEventExecutionResult.Success : GameEventExecutionResult.Failed;
+            res = player.MakeMove(dimension, direction, ref info) ? GameEventExecutionResult.Success : GameEventExecutionResult.Failed;
 
             //if not then the event is failure
             if (res == GameEventExecutionResult.Failed)
@@ -67,18 +79,42 @@ public class Player : MonoBehaviour
 
             World w = World.main;
 
-            //reverse cell visit effects
-            w.Cells[player.currentPosition].Data.Number1++;
-            w.Cells[player.currentPosition].Redraw();
-            w.Sum++;
-            w.RenderPositionChanges();
+            for (int i = info.ExCells.Count - 1; i >= 1; i--) {
 
-            //move player to old position
-            player.currentPosition[dimension] -= direction;
+                Cell cell = w.Cells.OneDimensional[info.ExCells[i]];
+                cell.Data.Number1++;
+                if (cell.Data.Type == CellData.CellType.Increaser)
+                    cell.IncreaserReverseIncrease();
+                cell.Redraw();
+                
+
+                if (cell.Data.Number1 > 0)
+                {
+                    switch (w.GameType)
+                    {
+                        case World.GameTypes.SumToZero:
+                            if (cell.Data.Type != CellData.CellType.ReachCell)
+                                w.Sum++;
+                            break;
+                        case World.GameTypes.ReachPoints:
+                            if (cell.Data.Type == CellData.CellType.ReachCell)
+                                w.ReachCellSum++;
+                            break;
+                        default:
+                            break;
+                    }
+                }
+
+            }
+
+
+            w.RenderPositionChanges();
+            
 
             //reposition the player to old position
             if (w.Cells != null && player.currentPosition.Length > 0)
             {
+                w.Cells.getCoordsNonAlloc(info.ExCells[0], ref player.currentPosition);
                 player.Reposition();
             }
 
@@ -105,12 +141,17 @@ public class Player : MonoBehaviour
 
     #endregion
 
-    bool MakeMove(int dim, int direction)
+    bool MakeMove(int dim, int direction, ref PlayerMoveInfo info)
     {
 
         //check if given dimensions is in level dim bounds
         if (dim >= World.main.Cells.Dimensions.Length || dim < 0)
             return false;
+
+        if (info == null)
+            info = new PlayerMoveInfo();
+
+        info.ExCells.Clear();
 
         int dt = currentPosition[dim] + direction;
 
@@ -119,6 +160,7 @@ public class Player : MonoBehaviour
 
             //remember old position for case if cell cannot be visited
             int old = currentPosition[dim];
+            info.ExCells.Add(World.main.Cells.getIndex(currentPosition));
 
             //set new position to player
             currentPosition[dim] = dt;
@@ -126,12 +168,107 @@ public class Player : MonoBehaviour
             //print("Move: " + string.Join(", ", currentPosition) + " " + Cells[currentPosition].name + " i: " + Cells.getIndex(currentPosition));
 
             //empty cells cannot be visited
-            if (World.main.Cells[currentPosition].Data.Number1 > 0)
+            if (World.main.Cells[currentPosition].Data.Number1 != 0)
             {
 
-                World.main.Cells[currentPosition].Data.Number1--;
-                World.main.Cells[currentPosition].Redraw();
-                World.main.Sum--;
+                switch (World.main.Cells[currentPosition].Data.Type)
+                {
+                    case CellData.CellType.Default:
+                    case CellData.CellType.Start:
+
+                        Cell cellDS = World.main.Cells[currentPosition];
+
+                        cellDS.Data.Number1--;
+                        cellDS.Redraw();
+                        if (cellDS.Data.Number1 >= 0)
+                            World.main.Sum--;
+
+                        info.ExCells.Add(World.main.Cells.getIndex(currentPosition));
+
+                        break;
+                    case CellData.CellType.TeleportIn:
+
+                        Cell cellTI = World.main.Cells[currentPosition];
+
+                        cellTI.Data.Number1--;
+                        cellTI.Redraw();
+                        if (cellTI.Data.Number1 >= 0)
+                            World.main.Sum--;
+
+                        info.ExCells.Add(World.main.Cells.getIndex(currentPosition));
+
+                        //TODO: visit other teleports/cell straght away
+
+                        int pos = World.main.Cells[currentPosition].Data.Number2;
+
+                        while(World.main.Cells.OneDimensional[pos].Data.Type == CellData.CellType.TeleportIn && World.main.Cells.OneDimensional[pos].Data.Number1 > 0)
+                        {
+
+                            info.ExCells.Add(pos);
+
+                            Cell cell = World.main.Cells.OneDimensional[pos];
+                            cell.Data.Number1--;
+                            cell.Redraw();
+                            if (cell.Data.Number1 >= 0)
+                                World.main.Sum--;
+
+                            pos = cell.Data.Number2;
+
+                        }
+
+                        info.ExCells.Add(pos);
+
+                        cellTI = World.main.Cells.OneDimensional[pos];
+
+                        cellTI.Data.Number1--;
+                        cellTI.Redraw();
+                        if (cellTI.Data.Number1 >= 0)
+                            World.main.Sum--;
+
+                        //move player to pos
+                        World.main.Cells.getCoordsNonAlloc(pos, ref currentPosition);
+
+
+                        break;
+
+                    case CellData.CellType.ReachCell:
+
+                        Cell cellRC = World.main.Cells[currentPosition];
+
+                        cellRC.Data.Number1--;
+                        cellRC.Redraw();
+                        if (cellRC.Data.Number1 >= 0)
+                            World.main.ReachCellSum--;
+
+                        info.ExCells.Add(World.main.Cells.getIndex(currentPosition));
+
+                        break;
+
+                    case CellData.CellType.Increaser:
+
+                        Cell cellI = World.main.Cells[currentPosition];
+
+                        cellI.Data.Number1--;
+                        cellI.Redraw();
+                        if (cellI.Data.Number1 >= 0)
+                        {
+                            World.main.Sum--;
+                            //conditional increase?
+                            //cellI.IncraserIncrease();
+                        }
+
+                        cellI.IncraserIncrease();
+
+                        info.ExCells.Add(World.main.Cells.getIndex(currentPosition));
+
+                        break;
+
+                    default:
+                        //error?
+                        break;
+                }
+
+                
 
                 World.main.RenderPositionChanges();
 
@@ -144,6 +281,8 @@ public class Player : MonoBehaviour
                 //cell cannot be visited - rollback
                 currentPosition[dim] = old;
 
+                info.ExCells.Clear();
+
             }
 
         }
@@ -154,7 +293,7 @@ public class Player : MonoBehaviour
     public void Reposition()
     {
         World w = World.main;
-        Vector3 newPlayerPos = new Vector3(currentPosition[0] * w.buildingDistance, w.Cells[currentPosition].Data.Number1);
+        Vector3 newPlayerPos = new Vector3(currentPosition[0] * w.buildingDistance, Mathf.Clamp(w.Cells[currentPosition].Data.Number1, 0f, float.MaxValue));
         if (currentPosition.Length > 1)
         {
             newPlayerPos.z = currentPosition[1] * w.buildingDistance;
