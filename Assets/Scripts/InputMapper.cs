@@ -17,6 +17,8 @@ public class InputMapper : MonoBehaviour
 
     public KeyCode UndoKey = KeyCode.B, RedoKey = KeyCode.N;
 
+    public KeyCode CameraRotateLeftKey = KeyCode.LeftArrow, CameraRotateRightKey = KeyCode.RightArrow;
+
     public static InputMapper main;
 
     public int[] moveDimension;
@@ -26,6 +28,8 @@ public class InputMapper : MonoBehaviour
     public bool Undo;
 
     public bool Redo;
+
+    public bool CameraRotateLeft, CameraRotateRight;
 
     private void Awake()
     {
@@ -62,5 +66,9 @@ public class InputMapper : MonoBehaviour
             Redo = Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Y) || Input.GetKeyDown(RedoKey);
 
         }
+
+        CameraRotateLeft = Input.GetKeyDown(CameraRotateLeftKey);
+        CameraRotateRight = Input.GetKeyDown(CameraRotateRightKey);
+
     }
 }
