@@ -1,11 +1,12 @@
 
-Cell Binary Format: (int cellType, int number1, int number2, int buildingType)
+Cell Binary Format: (int cellType, int number1, int number2, int buildingType, int affectedGroup)
 
 cellTypes:
-	Default
-	Start
-	TeleportIn
-	TeleportOut
+	Default		0
+	Start		1
+	TeleportIn	2
+	ReachCell	3
+	Increaser	4
 	
 
 number1 - cell life
@@ -13,5 +14,8 @@ number1 - cell life
 	[1, IntMax] can be visited
 	-1 - immortal (can always be visited)
 	
-number2 - used in teleports
+number2 - used in teleports for index of cell in 1D world cell array that it teleports player to
+	  also number that increaser adds up to its cells in affectedGroup
+
+affectedGroup - used for increasers, index of group defined in level file
 	
