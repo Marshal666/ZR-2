@@ -196,6 +196,10 @@ public class Scene : MonoBehaviour
                     }
                     break;
                 case World.GameTypes.ReachPoints:
+                    if(World.main.ReachCellSum == 0)
+                    {
+                        return true;
+                    }
                     break;
                 default:
                     break;
