@@ -2,6 +2,9 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// Maps input
+/// </summary>
 [DefaultExecutionOrder(-1)]
 public class InputMapper : MonoBehaviour
 {
@@ -19,6 +22,8 @@ public class InputMapper : MonoBehaviour
 
     public KeyCode CameraRotateLeftKey = KeyCode.LeftArrow, CameraRotateRightKey = KeyCode.RightArrow;
 
+    public bool InvertMouseScroll = true;
+
     public static InputMapper main;
 
     public int[] moveDimension;
@@ -30,6 +35,8 @@ public class InputMapper : MonoBehaviour
     public bool Redo;
 
     public bool CameraRotateLeft, CameraRotateRight;
+
+    public float CameraZoom = 0f;
 
     private void Awake()
     {
@@ -69,6 +76,8 @@ public class InputMapper : MonoBehaviour
 
         CameraRotateLeft = Input.GetKeyDown(CameraRotateLeftKey);
         CameraRotateRight = Input.GetKeyDown(CameraRotateRightKey);
+
+        CameraZoom = Input.mouseScrollDelta.y * (InvertMouseScroll ? -1 : 1);
 
     }
 }

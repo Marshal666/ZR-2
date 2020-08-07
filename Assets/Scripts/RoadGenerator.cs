@@ -4,38 +4,76 @@ using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.UIElements;
 
+/// <summary>
+/// Class for generating road grids
+/// </summary>
 public static class RoadGenerator
 {
 
+    //UV map values for road parts
+
+    /// <summary>
+    /// Center part UVs
+    /// </summary>
     static Vector2[] quadCenterUVs = new Vector2[] {    new Vector2(0.506584f, 0.006584f), new Vector2(0.993416f, 0.006584f),
                                                         new Vector2(0.993416f, 0.493416f), new Vector2(0.506584f, 0.493416f) };
 
+    /// <summary>
+    /// Road UVs
+    /// </summary>
     static Vector2[] quadRoadUVs = new Vector2[] {      new Vector2(0.50625f, 0.507027f), new Vector2(0.99375f, 0.507027f),
                                                         new Vector2(0.99375f, 0.99375f), new Vector2(0.50625f, 0.99375f) };
 
+    /// <summary>
+    /// Crossing UVs
+    /// </summary>
     static Vector2[] quadCrossingUVs = new Vector2[] {  new Vector2(0.00625f, 0.50625f), new Vector2(0.49375f, 0.50625f),
                                                         new Vector2(0.49375f, 0.99375f), new Vector2(0.00625f, 0.99375f) };
 
+    /// <summary>
+    /// Sideroad UVs
+    /// </summary>
     static Vector2[] quadSideroadUVs = new Vector2[] {  new Vector2(0.005775f, 0.005775f), new Vector2(0.494225f, 0.005775f),
                                                         new Vector2(0.494225f, 0.494225f), new Vector2(0.005775f, 0.494225f) };
 
+
+
+    /// <summary>
+    /// Scaled basic vectors using distance parameter
+    /// </summary>
     static Vector3 left, right, forward, back;
 
+    /// <summary>
+    /// Rotations for road directions
+    /// </summary>
     static Quaternion   leftRotation = Quaternion.LookRotation(Vector3.left),
                         rightRotation = Quaternion.LookRotation(Vector3.right),
                         forwardRotation = Quaternion.LookRotation(Vector3.forward),
                         backRotation = Quaternion.LookRotation(Vector3.back);
 
+    /// <summary>
+    /// Generates a new road grid object(s)
+    /// </summary>
+    /// <param name="width">Grid width</param>
+    /// <param name="height">Grid height</param>
+    /// <param name="distance">Road length</param>
+    /// <param name="depth">Road height</param>
+    /// <param name="roadCount">Number of roads between crossings</param>
+    /// <returns>Reference to a new game object holding road grid object(s)</returns>
     public static GameObject MakeRoad(int width, int height, float distance, float depth, int roadCount)
     {
 
+        //create base road object
         GameObject road = new GameObject("Road");
         Transform roadTransform = road.transform;
+        //every dynamic object should be in Root
         roadTransform.SetParent(Scene.RootTransform);
 
+        //no point im making 0 grids
         if (width <= 0 || height <= 0)
             return road;
 
+        //for tracking the process of made grids
         bool[,] grids = new bool[width, height];
         bool done = false;
 
@@ -45,32 +83,45 @@ public static class RoadGenerator
         forward = Vector3.forward * distance;
         back = Vector3.back * distance;
 
+        //id of road part object(s)
         int p = 0;
 
+        //current position in grid
         (int x, int y) pos = (0, 0);
 
+        //generate grids
         while(!done)
         {
 
+            //road may be split in separate objects if its vertex count is larger than ushort.MaxValue (65535)
             GameObject g = new GameObject("RoadPart" + p);
             g.transform.SetParent(roadTransform);
 
+            //if GenerateRoadGrids returns false, then mesh has nearly the maximum possible amount of verts
             done |= GenerateRoadGrids(ref grids, ref pos, out Mesh mesh, distance, depth, roadCount);
 
+            //assign mesh and material to road grid object
             g.AddComponent<MeshFilter>().mesh = mesh;
 
             g.AddComponent<MeshRenderer>().material = GameData.RoadMaterial;
 
-            //TODO: position object?
+            //position object? - not needed since mesh has required offset
 
             p++;
 
         }
 
-
         return road;
+
     }
 
+    /// <summary>
+    /// Converts pos to actual world position
+    /// </summary>
+    /// <param name="pos">Current position in world cords</param>
+    /// <param name="distance">Distance param</param>
+    /// <param name="roadCount">Road count param</param>
+    /// <returns></returns>
     static Vector3 gridCordsToWorldCords((int x, int y) pos, float distance, int roadCount)
     {
         float offset = (3f * distance + 2f * roadCount * distance) * 2f;
@@ -78,11 +129,25 @@ public static class RoadGenerator
         return res;
     }
 
+    /// <summary>
+    /// Makes road grid mesh for one object
+    /// </summary>
+    /// <param name="grids">Grid array for checking progress</param>
+    /// <param name="pos">Position in grid</param>
+    /// <param name="mesh">Returns generated mesh</param>
+    /// <param name="distance">Distance param</param>
+    /// <param name="depth">Depth param</param>
+    /// <param name="roadCount">Road count param</param>
+    /// <returns>true if whole grid was made, false if only part of it was made</returns>
     static bool GenerateRoadGrids(ref bool[,] grids, ref (int x, int y) pos, out Mesh mesh, float distance, float depth, int roadCount)
     {
+
+        //create mesh and required lists
         mesh = new Mesh();
 
         List<Vector3> verts = new List<Vector3>();
+
+        //track of how many vertices mesh has
         int vertsoffset = 0;
 
         List<Vector2> uvs = new List<Vector2>();
@@ -90,8 +155,6 @@ public static class RoadGenerator
         List<int> tris = new List<int>();
 
         bool success = true;
-
-
 
         //Make road mesh
 
@@ -105,6 +168,8 @@ public static class RoadGenerator
                 pos.y = j;
                 success &= makeSingleGrid(pos);
                 grids[i, j] = success;
+
+                //if making single grid fails, quit making more
                 if (!success)
                     goto endOfLoop;
                 
@@ -114,7 +179,7 @@ public static class RoadGenerator
 
         endOfLoop:
 
-
+        //set up mesh
         mesh.SetVertices(verts);
         mesh.SetTriangles(tris, 0);
         mesh.SetUVs(0, uvs);
@@ -123,6 +188,7 @@ public static class RoadGenerator
 
         return success;
 
+        //makes single grid, if verts offset + newGrid have more than allowed verts, return false
         bool makeSingleGrid((int x, int y) p)
         {
 
