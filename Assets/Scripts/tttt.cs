@@ -114,6 +114,33 @@ public class tttt : MonoBehaviour
     */
     #endregion
 
+    #region EVENTTESTMTH
+    /*
+    void A ()
+    {
+        print("A");
+    }
+
+    void B()
+    {
+        print("B");
+    }
+
+    delegate void Del();
+
+    Del meth;
+    */
+    #endregion
+
+    private void Awake()
+    {
+        /*
+        #region AWAKETEST
+        print("aw");
+        #endregion
+        */
+    }
+
     // Start is called before the first frame update
     void Start()
     {
@@ -320,6 +347,16 @@ public class tttt : MonoBehaviour
        */
         #endregion
 
+        #region EVENTTESTMTH
+        /*
+        meth += A;
+        meth += B;
+        meth += B;
+
+        meth.Invoke();
+        */
+        #endregion
+
     }
 
     private void Update()
@@ -370,7 +407,7 @@ public class tttt : MonoBehaviour
         }
         */
         #endregion
-        
+
         #region SCENEVENTSYSTT
         /*
         if(Input.GetKeyDown(KeyCode.A))
@@ -383,6 +420,15 @@ public class tttt : MonoBehaviour
             Scene.EventSystem.AddEvent(new addB());
             print(str);
         }*/
+        #endregion
+
+        #region AWAKETEST
+        /*
+        if(Input.GetKeyDown(KeyCode.I))
+        {
+            Instantiate(this);
+        }
+        */
         #endregion
 
     }
