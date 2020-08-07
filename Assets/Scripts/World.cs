@@ -59,7 +59,7 @@ public class World : MonoBehaviour
                 for(int i = 0; i < parent.childCount; i++)
                 {
                     q.Enqueue((parent.GetChild(i), dim - 1));
-                    if(Scene.Player.currentPosition[dim] == i)
+                    if(Scene.Player.CurrentPosition[dim] == i)
                     {
                         parent.GetChild(i).gameObject.SetActive(true);
                     } else
@@ -86,7 +86,7 @@ public class World : MonoBehaviour
     {
 
         //print(Directory.GetCurrentDirectory());
-        print(LoadLevel("celltest.txt"));
+        //print(LoadLevel("celltest.txt"));
         
     }
 
@@ -107,18 +107,22 @@ public class World : MonoBehaviour
         try
         {
 
+            //currently this only works on text files
             StreamReader r = new StreamReader(file);
 
+            //load game type
             string gameTypeString = r.ReadLine();
 
             GameType = (GameTypes)Enum.Parse(typeof(GameTypes), gameTypeString);
 
+            //load cell groups
             string gameGroupCountString = r.ReadLine();
 
             int gameGroupCount = int.Parse(gameGroupCountString);
 
             CellGroups = new int[gameGroupCount][];
 
+            //parse cell groups
             char[] delims = {',', ' ', '\t', '\r', '{', '}'};
 
             for (int i = 0; i < gameGroupCount; i++)
@@ -132,6 +136,7 @@ public class World : MonoBehaviour
                 }
             }
 
+            //load level dimensions
             string[] infos = r.ReadLine().Split(separators, StringSplitOptions.RemoveEmptyEntries);
 
             List<int> dims = parseStrings(infos);
@@ -155,10 +160,11 @@ public class World : MonoBehaviour
 
             int[] current = new int[dimensions.Length];
 
-            Scene.Player.currentPosition = new int[dimensions.Length];
+            Scene.Player.CurrentPosition = new int[dimensions.Length];
 
             string cellInfosTxt = r.ReadToEnd();
 
+            //cell parsing
             //get all cell infos using regex for "(...) (...)..."
             Regex regx = new Regex(@"\(.+?\)", RegexOptions.Multiline);
             Match mt = regx.Match(cellInfosTxt);
@@ -183,6 +189,7 @@ public class World : MonoBehaviour
             Sum = 0;
             ReachCellSum = 0;
 
+            //place cells in their dimension objects
             while (qq.Count != 0)
             {
                 (int dimindex, Transform parent) = qq.Dequeue();
@@ -224,6 +231,7 @@ public class World : MonoBehaviour
 
                         Cells.OneDimensional[ci] = cell.AddComponent<Cell>();
                         Cells.OneDimensional[ci].Data = data;
+                        Cells.OneDimensional[ci].Init();
                         Cells.OneDimensional[ci].Draw();
 
                         switch (GameType)
@@ -239,12 +247,9 @@ public class World : MonoBehaviour
                             default:
                                 break;
                         }
-                        
 
-
-
-                        if (Cells.OneDimensional[ci].Data.Type == CellData.CellType.Start)
-                            Scene.Player.currentPosition = Cells.getCoords(ci);
+                        if ((Cells.OneDimensional[ci].Data.Type & CellData.CellType.Start) == CellData.CellType.Start)
+                            Scene.Player.CurrentPosition = Cells.getCoords(ci);
 
                         ci++;
 
