@@ -9,18 +9,13 @@ using System.Linq;
 public class World : MonoBehaviour
 {
 
-    public enum GameTypes
-    {
-        SumToZero,
-        ReachPoints,
-        //.... add more?
-    }
+    public WorldData Data;
 
     public MArray<Cell> Cells;
 
-    public int[][] CellGroups;
+    public int[][] CellGroups { get { return Data.CellGroups; } set { Data.CellGroups = value; } }
 
-    public GameTypes GameType = GameTypes.SumToZero;
+    public WorldData.GameTypes GameType { get { return Data.GameType; } set { Data.GameType = value; } }
 
     public GameObject CellPrefab;
 
@@ -51,18 +46,19 @@ public class World : MonoBehaviour
 
         q.Enqueue(wo);
 
-        while(q.Count != 0)
+        while (q.Count != 0)
         {
             (Transform parent, int dim) = q.Dequeue();
-            if(dim > 1)
+            if (dim > 1)
             {
-                for(int i = 0; i < parent.childCount; i++)
+                for (int i = 0; i < parent.childCount; i++)
                 {
                     q.Enqueue((parent.GetChild(i), dim - 1));
-                    if(Scene.Player.CurrentPosition[dim] == i)
+                    if (Scene.Player.CurrentPosition[dim] == i)
                     {
                         parent.GetChild(i).gameObject.SetActive(true);
-                    } else
+                    }
+                    else
                     {
                         parent.GetChild(i).gameObject.SetActive(false);
                     }
@@ -74,7 +70,7 @@ public class World : MonoBehaviour
 
     }
 
-    
+
 
     private void Awake()
     {
@@ -87,33 +83,140 @@ public class World : MonoBehaviour
 
         //print(Directory.GetCurrentDirectory());
         //print(LoadLevel("celltest.txt"));
-        
-    }
 
-    static readonly char[] separators = { ' ', '\t', '\n', '\r' };
-
-    static List<int> parseStrings(string[] s)
-    {
-        List<int> r = new List<int>(s.Length + 1);
-        for(int i = 0; i < s.Length; i++)
-        {
-            r.Add(int.Parse(s[i]));
-        }
-        return r;
     }
 
     public bool LoadLevel(string file)
     {
+
+        bool r = true;
+
+        Data = new WorldData();
+
+        r &= Data.Load(file);
+
+        if (!r)
+            return r;
+
+        int[] dimensions = Data.CellDatas.Dimensions;
+
+        Cells = new MArray<Cell>(dimensions);
+
+        int[] current = new int[dimensions.Length];
+
+        Scene.Player.CurrentPosition = new int[dimensions.Length];
+
+        dimensionHolders.Clear();
+        dimensionHolders.Add(new GameObject("World Objects").transform);
+        dimensionHolders[dimensionHolders.Count - 1].SetParent(Scene.RootTransform);
+
+        //create dimension holder for every dimension > 1, non recursive
+        Queue<(int dimindex, Transform parent)> qq = new Queue<(int, Transform)>(64);
+
+        //start with highest dimension
+        qq.Enqueue((dimensions.Length - 1, dimensionHolders[0]));
+
+        //naming index vector
+        int[] dinx = new int[dimensions.Length];
+
+        //index of current cell for reading cell info from file
+        int ci = 0;
+
+        Sum = 0;
+        ReachCellSum = 0;
+
+        //place cells in their dimension objects
+        while (qq.Count != 0)
+        {
+            (int dimindex, Transform parent) = qq.Dequeue();
+            if (dimindex >= 1)
+            {
+                for (int i = 0; i < dimensions[dimindex]; i++)
+                {
+                    Transform t = new GameObject("Dimension" + (dimindex) + "_" + (dinx[dimindex]++)).transform;
+                    dimensionHolders.Add(t);
+                    t.SetParent(parent);
+                    qq.Enqueue((dimindex - 1, t));
+                }
+            }
+            else      //a single cell is 0D object
+            {
+
+                Cells.getCoordsNonAlloc(ci, ref current);
+
+                if (current.Length > 1)
+                    parent.transform.localPosition = Vector3.forward * current[1] * buildingDistance;
+
+                //create all cells for following 1st dimension
+                for (int j = 0; j < dimensions[0]; j++)
+                {
+
+                    Cells.getCoordsNonAlloc(ci, ref current);
+
+                    GameObject cell = Instantiate(CellPrefab);
+                    cell.name = "Cell" + (dinx[dimindex]++);
+
+
+                    Transform cellTransform = cell.transform;
+
+                    cellTransform.SetParent(parent);
+                    cell.transform.localPosition = Vector3.right * j * buildingDistance;
+
+                    Cells.OneDimensional[ci] = cell.AddComponent<Cell>();
+                    Cells.OneDimensional[ci].Data = Data.CellDatas.OneDimensional[ci];
+                    Cells.OneDimensional[ci].Init();
+                    Cells.OneDimensional[ci].Draw();
+
+                    switch (GameType)
+                    {
+                        case WorldData.GameTypes.SumToZero:
+                            if (Cells.OneDimensional[ci].Data.Number1 > 0 && 
+                                (Cells.OneDimensional[ci].Data.Type & CellData.CellType.ReachCell) != CellData.CellType.ReachCell &&
+                                (Cells.OneDimensional[ci].Data.Type & CellData.CellType.Default) == CellData.CellType.Default)
+                                Sum += Cells.OneDimensional[ci].Data.Number1;
+                            break;
+                        case WorldData.GameTypes.ReachPoints:
+                            if (Cells.OneDimensional[ci].Data.Type == CellData.CellType.ReachCell)
+                                ReachCellSum += Cells.OneDimensional[ci].Data.Number1;
+                            break;
+                        default:
+                            break;
+                    }
+
+                    if ((Cells.OneDimensional[ci].Data.Type & CellData.CellType.Start) == CellData.CellType.Start)
+                        Scene.Player.CurrentPosition = Cells.getCoords(ci);
+
+                    ci++;
+
+                }
+            }
+        }
+
+        //hide other worlds (if any)
+        RenderPositionChanges();
+
+        //create world around cells
+        CreateWorld();
+
+        PositionPlayer();
+
+        PlayerCamera.main.lookDirectionIndex = 0;
+
+        return r;
+
+        #region OLD_WAY
+        /*
         try
         {
 
+            
             //currently this only works on text files
             StreamReader r = new StreamReader(file);
 
             //load game type
             string gameTypeString = r.ReadLine();
 
-            GameType = (GameTypes)Enum.Parse(typeof(GameTypes), gameTypeString);
+            GameType = (WorldData.GameTypes)Enum.Parse(typeof(WorldData.GameTypes), gameTypeString);
 
             //load cell groups
             string gameGroupCountString = r.ReadLine();
@@ -236,11 +339,11 @@ public class World : MonoBehaviour
 
                         switch (GameType)
                         {
-                            case GameTypes.SumToZero:
+                            case WorldData.GameTypes.SumToZero:
                                 if (Cells.OneDimensional[ci].Data.Number1 > 0 && Cells.OneDimensional[ci].Data.Type != CellData.CellType.ReachCell)
                                     Sum += Cells.OneDimensional[ci].Data.Number1;
                                 break;
-                            case GameTypes.ReachPoints:
+                            case WorldData.GameTypes.ReachPoints:
                                 if (Cells.OneDimensional[ci].Data.Type == CellData.CellType.ReachCell)
                                     ReachCellSum += Cells.OneDimensional[ci].Data.Number1;
                                 break;
@@ -277,6 +380,8 @@ public class World : MonoBehaviour
         PositionPlayer();
 
         return true;    //all job was done
+            */
+        #endregion
 
     }
 
@@ -293,6 +398,18 @@ public class World : MonoBehaviour
         //TODO: generate road and terrain around buildings
 
         //RoadGenerator.MakeRoad(Cells.Dimensions[0], Cells.Dimensions.Length > 1 ? Cells.Dimensions[1] : 1, buildingDistance);
+    }
+
+    /// <summary>
+    /// Clears everything related to this object
+    /// </summary>
+    public void ResetToDefault()
+    {
+        Data = null;
+        Cells = null;
+        dimensionHolders.Clear();
+        Sum = ReachCellSum = 0;
+        Scene.ClearRoot();
     }
 
 }
