@@ -17,6 +17,11 @@ public class Cell : MonoBehaviour
     public CellData Data;
 
     /// <summary>
+    /// Is Cell currently under a preview?
+    /// </summary>
+    public bool BeingPreviewed = false;
+
+    /// <summary>
     /// Script init
     /// </summary>
     private void Awake()
@@ -39,6 +44,9 @@ public class Cell : MonoBehaviour
         {
             Visit += TeleportInVisit;
             UnVisit += TeleportInUnVisit;
+
+            PreviewChanges += TeleportPreview;
+            RemovePreviewChanges += TeleportRemovePreview;
         }
         if((Data.Type & CellData.CellType.ReachCell) == CellData.CellType.ReachCell)
         {
@@ -49,7 +57,13 @@ public class Cell : MonoBehaviour
         {
             Visit += IncreaserVisit;
             UnVisit += IncreaserUnVisit;
+
+            PreviewChanges += IncreaserPreview;
+            RemovePreviewChanges += IncreaserRemovePreview;
         }
+
+        PreviewChanges += BasePreview;
+        RemovePreviewChanges += BaseRemovePreview;
     }
 
     /// <summary>
@@ -89,12 +103,122 @@ public class Cell : MonoBehaviour
 
     }
 
+    public void DrawPreview(int newNumber1)
+    {
+        for (int i = 0; i < Mathf.Max(newNumber1, Data.Number1, transform.childCount); i++)
+        {
+            GameObject o;
+            if (i < transform.childCount)
+            {
+                o = transform.GetChild(i).gameObject;
+            }
+            else
+            {
+                o = Instantiate(GameData.BuildingBlocks[Data.BuildingType]);
+                o.transform.SetParent(transform);
+                o.transform.localPosition = Vector3.up * i;
+            }
+            o.SetActive(i < newNumber1 || i < Data.Number1);
+
+            void SetSemiTransparentColor()
+            {
+                MeshRenderer mr = o.GetComponent<MeshRenderer>();
+                if (mr.material)
+                {
+                    Color c = mr.material.color;
+                    c.a = GameData.SemiTransparentCellColor;
+                    mr.material.color = c;
+                }
+            }
+
+            //print("nn1: " + newNumber1 + " n1: " + Data.Number1);
+
+            if(newNumber1 < Data.Number1)
+            {
+                if(i > newNumber1 - 1)
+                {
+                    SetSemiTransparentColor();
+                    //print("stc");
+                }
+            } else if(newNumber1 > Data.Number1)
+            {
+                if(i >= Data.Number1 - 1)
+                {
+                    SetSemiTransparentColor();
+                    //print("stc");
+                }
+            }
+
+
+        }
+    }
+
+    public void UnDrawPreview()
+    {
+
+        for (int i = 0; i < Mathf.Max(Data.Number1, transform.childCount); i++)
+        {
+            GameObject o;
+            if (i < transform.childCount)
+            {
+                o = transform.GetChild(i).gameObject;
+            }
+            else
+            {
+                o = Instantiate(GameData.BuildingBlocks[Data.BuildingType]);
+                o.transform.SetParent(transform);
+                o.transform.localPosition = Vector3.up * i;
+            }
+            o.SetActive(i < Data.Number1);
+
+            void SetNormalTransparency()
+            {
+                MeshRenderer mr = o.GetComponent<MeshRenderer>();
+                if (mr.material)
+                {
+                    Color c = mr.material.color;
+                    c.a = GameData.DefaultCellAlphaColor;
+                    mr.material.color = c;
+                }
+            }
+
+            SetNormalTransparency();
+        }
+
+    }
+
+    /// <summary>
+    /// Places given object above the cell
+    /// </summary>
+    /// <param name="o"></param>
+    public void DrawAbove(GameObject o)
+    {
+        if(o)
+        {
+            for(int i = transform.childCount - 1; i >= 0; i--)
+            {
+                Transform ch = transform.GetChild(i);
+                if(ch.gameObject.activeSelf)
+                {
+                    //Add height factor maybe?
+                    o.transform.position = ch.position + Vector3.up;
+                    return;
+                }
+            }
+        }
+    }
+
     /// <summary>
     /// For Visit methods
     /// </summary>
     /// <param name="player">Player visiting the cell</param>
     /// <param name="moveInfo">Events moveInfo</param>
     public delegate void VisitDelegate(Player player, ref Player.PlayerMoveInfo moveInfo);
+
+    /// <summary>
+    /// For preview methods
+    /// </summary>
+    public delegate void PreviewDelegate();
 
     /// <summary>
     /// Visit methods
@@ -112,6 +236,16 @@ public class Cell : MonoBehaviour
     /// UnVisit methods
     /// </summary>
     public UnVisitDelegate UnVisit;
+
+    /// <summary>
+    /// Called for previewing changes before visiting this cell
+    /// </summary>
+    public PreviewDelegate PreviewChanges;
+
+    /// <summary>
+    /// Called for removal of previewing changes before visiting this cell
+    /// </summary>
+    public PreviewDelegate RemovePreviewChanges;
 
     #region VISIT_UNVISITMETHODS
 
@@ -399,6 +533,89 @@ public class Cell : MonoBehaviour
 
             World.main.ReachCellSum += (sumsNew.Item2 - sumsOld.Item2);
 
+        }
+    }
+
+    void BasePreview()
+    {
+        if(!BeingPreviewed)
+        {
+            BeingPreviewed = true;
+        }
+    }
+
+    void BaseRemovePreview()
+    {
+        if(BeingPreviewed)
+        {
+            BeingPreviewed = false;
+        }
+    }
+
+    void IncreaserPreview()
+    {
+        if(!BeingPreviewed)
+        {
+            int[] cells = World.main.CellGroups[Data.AffectedCellGroup];
+            for(int i = 0; i < cells.Length; i++)
+            {
+                World.main.Cells.OneDimensional[cells[i]].DrawPreview(World.main.Cells[cells[i]].Data.Number1 + Data.Number3);
+            }
+        }
+    }
+
+    void IncreaserRemovePreview()
+    {
+        if(BeingPreviewed)
+        {
+            int[] cells = World.main.CellGroups[Data.AffectedCellGroup];
+            for (int i = 0; i < cells.Length; i++)
+            {
+                World.main.Cells.OneDimensional[cells[i]].UnDrawPreview();
+            }
+        }
+    }
+
+    GameObject arrowPointer = null;
+
+    void TeleportPreview()
+    {
+        if (!BeingPreviewed)
+        {
+            if (!arrowPointer)
+            {
+                arrowPointer = Instantiate(GameData.ArrowObject);
+                arrowPointer.transform.SetParent(Scene.RootTransform);
+            }
+            else
+            {
+                arrowPointer.SetActive(true);
+            }
+            Cell t = World.main.Cells.OneDimensional[Data.Number2];
+            t.DrawAbove(arrowPointer);
+            if (t != this)
+            {
+                //recursive way..
+                t.PreviewChanges?.Invoke();
+            }
+        }
+    }
+
+    void TeleportRemovePreview()
+    {
+        if (BeingPreviewed)
+        {
+            if (arrowPointer)
+            {
+                arrowPointer.SetActive(false);
+            }
+            Cell t = World.main.Cells.OneDimensional[Data.Number2];
+            t.DrawAbove(arrowPointer);
+            if (t != this)
+            {
+                //recursive way..
+                t.RemovePreviewChanges?.Invoke();
+            }
         }
     }
 
