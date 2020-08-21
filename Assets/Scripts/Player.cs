@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -186,8 +187,54 @@ public class Player : MonoBehaviour
     void Playing()
     {
 
-        //check for moves between dimensions
-        for (int i = 0; i < InputMapper.main.moveDimension.Length; i++)
+        //moving for 1st and 2nd dimension is special case because of camera rotation
+        Vector2Int movement = new Vector2Int();
+
+        if (InputMapper.main.moveDimension.Length > 0)
+            movement.x = InputMapper.main.moveDimension[0];
+
+        if (InputMapper.main.moveDimension.Length > 1)
+            movement.y = InputMapper.main.moveDimension[1];
+
+        int t;
+        //rotate movement vector according to camera
+        switch(PlayerCamera.main.lookDirectionIndex)
+        {
+            case 0: //forward
+                //all fine
+                break;
+            case 1: //left
+                t = movement.x;
+                movement.x = -movement.y;
+                movement.y = t;
+
+                break;
+            case 2: //down
+                movement *= -1;
+
+                break;
+            case 3: //right
+                t = movement.x;
+                movement.x = movement.y;
+                movement.y = -t;
+
+                break;
+            default: break;
+        }
+
+        //move first 2 dims if needed
+        if(movement.x != 0)
+        {
+            Scene.EventSystem.AddEvent(new PlayerMove(this, 0, movement.x));
+        }
+
+        if (movement.y != 0)
+        {
+            Scene.EventSystem.AddEvent(new PlayerMove(this, 1, movement.y));
+        }
+
+        //move other dims
+        for (int i = 2; i < InputMapper.main.moveDimension.Length; i++)
         {
             if (InputMapper.main.moveDimension[i] != 0)
             {
@@ -396,6 +443,15 @@ public class Player : MonoBehaviour
         //Execute state method
         PlayerState.Execute();
 
+    }
+
+
+    public void ResetToDefault()
+    {
+        transform.position = Vector3.zero;
+        transform.rotation = Quaternion.identity;
+        if (PlayerState.State != PlayerStates.NonPlaying)
+            PlayerState.SwitchState(PlayerStates.NonPlaying);
     }
 
 }
