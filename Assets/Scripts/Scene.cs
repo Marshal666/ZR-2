@@ -1,6 +1,8 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
+using UnityEngine.UI;
 
 /// <summary>
 /// Manages game scene
@@ -11,6 +13,17 @@ public class Scene : MonoBehaviour
     public GameObject StartMenuObject = null;
     public GameObject LevelSelectMenuObject = null;
     public GameObject OptionsMenuObject = null;
+
+    public GameObject WonLostObject = null;
+    public GameObject WonObjects = null;
+    public GameObject LostObjects = null;
+
+    public GameObject MessageBox = null;
+    public Text MessageBoxTitle = null;
+    public Text MessageBoxMessage = null;
+
+
+    public GameObject PauseMenuObject = null;
 
 
     public Dictionary<MenuStates, GameObject> MenuObjects;
@@ -24,6 +37,7 @@ public class Scene : MonoBehaviour
         Paused,
         Menu,
         Editor,
+        WonLost,
         //more required?
     }
 
@@ -78,6 +92,11 @@ public class Scene : MonoBehaviour
     Player playerC;
 
     /// <summary>
+    /// Player camera component reference
+    /// </summary>
+    public PlayerCamera playerCameraC;
+
+    /// <summary>
     /// Player object refrence
     /// </summary>
     public static GameObject PlayerObject { get { return main.player; } }
@@ -90,12 +109,12 @@ public class Scene : MonoBehaviour
     /// <summary>
     /// Games event system object
     /// </summary>
-    EventSystem es;
+    EventSystem Events;
 
     /// <summary>
     /// Games event system
     /// </summary>
-    public static EventSystem EventSystem { get { return main.es; } }
+    public static EventSystem EventSystem { get { return main.Events; } }
 
     /// <summary>
     /// Script init
@@ -116,6 +135,12 @@ public class Scene : MonoBehaviour
 
         GameState.Switches[GameStates.Playing][GameStates.Paused] = Pause;
         GameState.Switches[GameStates.Paused][GameStates.Playing] = Unpause;
+
+        GameState.Switches[GameStates.Menu][GameStates.Playing] = Menu2Playing;
+        GameState.Switches[GameStates.Paused][GameStates.Menu] = Paused2Menu;
+
+        GameState.Switches[GameStates.Playing][GameStates.WonLost] = Playing2WonLost;
+        GameState.Switches[GameStates.WonLost][GameStates.Menu] = WonLost2Menu;
 
         //init menu sm
         MenuState = new StateMachine<MenuStates>(MenuStates.Start);
@@ -167,12 +192,26 @@ public class Scene : MonoBehaviour
         playerC = player.GetComponent<Player>();
 
         //create event system object
-        es = new EventSystem();
+        Events = new EventSystem();
 
     }
 
     /// <summary>
-    /// Calls state machine to change game state
+    /// Clears all child objects of given object
+    /// </summary>
+    /// <param name="t">Object whose children will be deleted</param>
+    public static void ClearChildren(Transform t)
+    {
+        for (int i = t.childCount - 1; i >= 0; i--)
+        {
+            Destroy(t.GetChild(i).gameObject);
+        }
+    }
+
+    #region ONCLICK_EVENTS
+
+    /// <summary>
+    /// Calls state machine to change game state, used for button onClick events
     /// </summary>
     /// <param name="newState">Name of new game state</param>
     public void ChangeMenuState(string newState)
@@ -186,12 +225,143 @@ public class Scene : MonoBehaviour
     }
 
     /// <summary>
-    /// Exits game
+    /// Changes game state to given one, used for onClick button events
+    /// </summary>
+    /// <param name="newState">New game state</param>
+    public void ChangeGameState(string newState)
+    {
+        GameStates state = (GameStates)System.Enum.Parse(typeof(GameStates), newState);
+        if(state != GameState.State)
+        {
+            GameState.SwitchState(state);
+        }
+    }
+
+    /// <summary>
+    /// Exits game, for onClick button event
     /// </summary>
     public void QuitGame()
     {
         Application.Quit();
     }
+
+    /// <summary>
+    /// Disables message box
+    /// </summary>
+    public void DisableMessageBox()
+    {
+        MessageBox.SetActive(false);
+    }
+
+    #endregion
+
+    #region UI_METHODS
+
+    void DisableUI()
+    {
+
+        //disable menu
+        foreach (MenuStates ms in MenuObjects.Keys)
+        {
+            GameObject o = MenuObjects[ms];
+            if (o)
+            {
+                o.SetActive(false);
+            }
+        }
+
+        //disable pause UI
+        PauseMenuObject.SetActive(false);
+
+        //disable won/lost objects
+        WonLostObject.SetActive(false);
+        WonObjects.SetActive(false);
+        LostObjects.SetActive(false);
+
+        //disable message box
+        MessageBox.SetActive(false);
+
+    }
+
+    public void ShowMessageBox(string message, string title = "Game message")
+    {
+        MessageBox.SetActive(true);
+        MessageBoxMessage.text = message;
+        MessageBoxTitle.text = title;
+    }
+
+    void SwitchUIToState(MenuStates state)
+    {
+        DisableUI();
+        GameObject sh = MenuObjects[state];
+        if (sh)
+        {
+            sh.SetActive(true);
+        }
+    }
+
+    void ToLevelSelect()
+    {
+        //print("level select");
+        SwitchUIToState(MenuStates.LevelSelect);
+        UnLoadLevelButtons();
+        LoadLevelButtons();
+    }
+
+    void ToStart()
+    {
+        //print("start");
+        SwitchUIToState(MenuStates.Start);
+    }
+
+    void ToOptions()
+    {
+        //print("options");
+        SwitchUIToState(MenuStates.Options);
+    }
+
+    /// <summary>
+    /// Loads LoadLevel Buttons
+    /// </summary>
+    public void LoadLevelButtons()
+    {
+        //load level filenames
+        string[] levels = Directory.GetFiles(GameData.LocalLevelsDirectory);
+
+        for (int i = 0; i < levels.Length; i++)
+        {
+
+            GameObject button = Instantiate(GameData.LoadLevelButton);
+
+            button.name = "LoadLevel" + levels[i];
+            Text txt = button.GetComponentInChildren<Text>();
+            if (txt)
+                txt.text = levels[i];
+
+            button.transform.SetParent(GameData.LevelsContentHolder, false);
+
+            string lvl = levels[i];
+            button.GetComponent<Button>()?.onClick.AddListener(
+                delegate {
+                    if (World.main.LoadLevel(lvl))
+                    {
+                        GameState.SwitchState(GameStates.Playing);
+                    } else
+                    {
+                        //level loading failed
+                        ShowMessageBox("Level file is corrupt!", "Level loading failed");
+                    }
+                });
+
+        }
+    }
+
+    public void UnLoadLevelButtons()
+    {
+        ClearChildren(GameData.LevelsContentHolder);
+    }
+
+    #endregion
 
     #region STATE_METHODS
 
@@ -215,19 +385,27 @@ public class Scene : MonoBehaviour
 
         if (InputMapper.main.Undo)
         {
-            es.Undo();
+            Events.Undo();
         }
 
         if (InputMapper.main.Redo)
         {
-            es.Redo();
+            Events.Redo();
+        }
+
+        if(InputMapper.main.Pause)
+        {
+            GameState.SwitchState(GameStates.Paused);
         }
 
     }
 
     void Paused()
     {
-
+        if(InputMapper.main.Pause)
+        {
+            GameState.SwitchState(GameStates.Playing);
+        }
     }
 
     void Menu()
@@ -240,52 +418,79 @@ public class Scene : MonoBehaviour
 
     }
 
+    #endregion
+
+    #region SWITCH_STATE_METHODS
+
+    //for switches between states
+
+    void Menu2Playing()
+    {
+        DisableUI();
+        playerC.PlayerState.SwitchState(Player.PlayerStates.Playing);
+        playerCameraC.CameraState.SwitchState(PlayerCamera.PlayerCameraStates.FollowPlayer);
+    }
+
+    void Paused2Menu()
+    {
+        Time.timeScale = GameData.UnPausedTimeScale;
+        playerC.ResetToDefault();
+        World.main.ResetToDefault();
+        playerCameraC.ResetToDefault();
+        DisableUI();
+        MenuState.SwitchState(MenuStates.Start);
+        ResetToDefault();
+
+    }
+
     void Pause()
     {
+        Time.timeScale = GameData.PausedTimeScale;
+        playerC.PlayerState.SwitchState(Player.PlayerStates.NonPlaying);
+        playerCameraC.CameraState.SwitchState(PlayerCamera.PlayerCameraStates.Idle);
+
+        DisableUI();
+        PauseMenuObject.SetActive(true);
 
     }
 
     void Unpause()
     {
+        Time.timeScale = GameData.UnPausedTimeScale;
+        playerC.PlayerState.SwitchState(Player.PlayerStates.Playing);
+        playerCameraC.CameraState.SwitchState(PlayerCamera.PlayerCameraStates.FollowPlayer);
 
+        DisableUI();
     }
 
-    void SwitchUIToState(MenuStates state)
+    void Playing2WonLost()
     {
-        foreach (MenuStates ms in MenuObjects.Keys)
+        DisableUI();
+        WonLostObject.SetActive(true);
+        if (playerCameraC.CameraState.State != PlayerCamera.PlayerCameraStates.Idle)
+            playerCameraC.CameraState.SwitchState(PlayerCamera.PlayerCameraStates.Idle);
+        switch (playerC.PlayerState.State)
         {
-            if (ms != state)
-            {
-                GameObject o = MenuObjects[ms];
-                if(o)
-                {
-                    o.SetActive(false);
-                }
-            }
-        }
-        GameObject sh = MenuObjects[state];
-        if (sh)
-        {
-            sh.SetActive(true);
+            case Player.PlayerStates.Won:
+                WonObjects.SetActive(true);
+                break;
+            case Player.PlayerStates.Lost:
+                LostObjects.SetActive(true);
+                break;
+            default:
+                throw new System.Exception("Game ended but player has neither won or lost");
         }
     }
 
-    void ToLevelSelect()
+    void WonLost2Menu()
     {
-        //print("level select");
-        SwitchUIToState(MenuStates.LevelSelect);
-    }
-
-    void ToStart()
-    {
-        //print("start");
-        SwitchUIToState(MenuStates.Start);
-    }
-
-    void ToOptions()
-    {
-        //print("options");
-        SwitchUIToState(MenuStates.Options);
+        Time.timeScale = GameData.UnPausedTimeScale;
+        playerC.ResetToDefault();
+        World.main.ResetToDefault();
+        playerCameraC.ResetToDefault();
+        DisableUI();
+        MenuState.SwitchState(MenuStates.Start);
+        ResetToDefault();
     }
 
     #endregion
@@ -317,9 +522,9 @@ public class Scene : MonoBehaviour
     /// </summary>
     public static void PlayerWin()
     {
-        print("player won");
+        //print("player won");
         main.playerC.PlayerState.State = Player.PlayerStates.Won;
-        main.GameState.State = GameStates.Paused;
+        main.GameState.State = GameStates.WonLost;
     }
 
     /// <summary>
@@ -329,7 +534,7 @@ public class Scene : MonoBehaviour
     {
         print("player lost");
         main.playerC.PlayerState.State = Player.PlayerStates.Lost;
-        main.GameState.State = GameStates.Paused;
+        main.GameState.State = GameStates.WonLost;
     }
 
     /// <summary>
@@ -343,13 +548,13 @@ public class Scene : MonoBehaviour
         {
             switch (World.main.GameType)
             {
-                case World.GameTypes.SumToZero:
+                case WorldData.GameTypes.SumToZero:
                     if(World.main.Sum == 0)
                     {
                         return true;
                     }
                     break;
-                case World.GameTypes.ReachPoints:
+                case WorldData.GameTypes.ReachPoints:
                     if(World.main.ReachCellSum == 0)
                     {
                         return true;
@@ -373,6 +578,11 @@ public class Scene : MonoBehaviour
             //TODO: ??? as player cannot currently die because of EventSystem to drive it back
         }
         return false;
+    }
+
+    public void ResetToDefault()
+    {
+        Events.Clear();
     }
 
 }
