@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using System.Runtime.CompilerServices;
+using System;
 
 /// <summary>
 /// Contains info about cell data
@@ -99,7 +100,7 @@ public struct CellData
     {
         StringBuilder sb = new StringBuilder(32);
         sb.Append('(');
-        sb.Append(Type);
+        sb.Append(Convert.ToString((int)Type, 2));
         sb.Append(", ");
         sb.Append(Number1);
         sb.Append(", ");
