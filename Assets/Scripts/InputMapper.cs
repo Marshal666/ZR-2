@@ -22,6 +22,8 @@ public class InputMapper : MonoBehaviour
 
     public KeyCode CameraRotateLeftKey = KeyCode.LeftArrow, CameraRotateRightKey = KeyCode.RightArrow;
 
+    public KeyCode PauseKey = KeyCode.Escape;
+
     public bool InvertMouseScroll = true;
 
     public static InputMapper main;
@@ -35,6 +37,8 @@ public class InputMapper : MonoBehaviour
     public bool Redo;
 
     public bool CameraRotateLeft, CameraRotateRight;
+
+    public bool Pause;
 
     public float CameraZoom = 0f;
 
@@ -68,14 +72,15 @@ public class InputMapper : MonoBehaviour
                 moveDimension[i] = 0;
             }
 
-            Undo = Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Z) || Input.GetKeyDown(UndoKey);
-
-            Redo = Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Y) || Input.GetKeyDown(RedoKey);
-
         }
+
+        Undo = Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Z) || Input.GetKeyDown(UndoKey);
+        Redo = Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Y) || Input.GetKeyDown(RedoKey);
 
         CameraRotateLeft = Input.GetKeyDown(CameraRotateLeftKey);
         CameraRotateRight = Input.GetKeyDown(CameraRotateRightKey);
+
+        Pause = Input.GetKeyDown(PauseKey);
 
         CameraZoom = Input.mouseScrollDelta.y * (InvertMouseScroll ? -1 : 1);
 
