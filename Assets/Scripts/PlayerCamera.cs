@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngineInternal;
 
 /// <summary>
 /// Player camera managment class
@@ -46,7 +47,7 @@ public class PlayerCamera : MonoBehaviour
     /// <summary>
     /// speed of lookAt
     /// </summary>
-    public float lookAtSmoothSpeed = 1f;
+    public float lookAtSmoothTime = 0.1f;
 
     /// <summary>
     /// Offset from central world point when looking at it
@@ -62,6 +63,16 @@ public class PlayerCamera : MonoBehaviour
     /// Used in SmoothDamp()
     /// </summary>
     Vector3 velocitySmooth;
+
+    /// <summary>
+    /// Used in SmoothDamp()
+    /// </summary>
+    Vector3 rotationSmooth;
+
+    /// <summary>
+    /// For easier getting in scripts
+    /// </summary>
+    public static PlayerCamera main;
 
     /// <summary>
     /// Vector directions of looking at player 
@@ -97,7 +108,22 @@ public class PlayerCamera : MonoBehaviour
     /// <summary>
     /// State machine to process ways of looking at player
     /// </summary>
-    StateMachine<PlayerCameraStates> sm;
+    public StateMachine<PlayerCameraStates> CameraState;
+
+    /// <summary>
+    /// Position camera is set to when component resets
+    /// </summary>
+    public Vector3 defaultPosition;
+
+    /// <summary>
+    /// Rotation camera is set to when component resets
+    /// </summary>
+    public Vector3 defaultEulerAngles;
+
+    /// <summary>
+    /// Layers of cells used for raycasting
+    /// </summary>
+    public LayerMask CellLayers;
 
     /// <summary>
     /// Returns point from start to end, X and Y are lerped while Z is evaluated from curve
@@ -122,14 +148,58 @@ public class PlayerCamera : MonoBehaviour
         return res;
     }
 
+
+    /// <summary>
+    /// Cell that is under a raycast
+    /// </summary>
+    Cell currentCell = null;
+
+    void CheckRaycast()
+    {
+        const float raycastDistance = 1000f;
+
+        RaycastHit hit;
+        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        //Debug.DrawRay(ray.origin, ray.direction * raycastDistance, Color.red);
+
+        if(Physics.Raycast(ray, out hit, raycastDistance, CellLayers))
+        {
+
+            if(hit.transform.parent)
+            {
+                Cell cell = hit.transform.parent.GetComponent<Cell>();
+                if(cell != currentCell)
+                {
+                    if (currentCell != null)
+                        currentCell.RemovePreviewChanges?.Invoke();
+                }
+                if(cell)
+                {
+                    cell.PreviewChanges?.Invoke();
+                }
+                currentCell = cell;
+            }
+
+        } else
+        {
+
+            if(currentCell != null)
+            {
+                currentCell.RemovePreviewChanges?.Invoke();
+                currentCell = null;
+            }
+
+        }
+
+    }
+
     #region STATE_METHODS
 
     //State methods...
 
+    //FIX: probably needs a rework
     void FollowPlayer()
     {
-
-        //TODO: make path from position to targetPos curvy/sphereical instead of a line
 
         if (InputMapper.main.CameraRotateLeft)
         {
@@ -146,14 +216,50 @@ public class PlayerCamera : MonoBehaviour
 
         Vector3 targetPos = playerTransform.position + lookAtPlayerDirections[lookDirectionIndex] * (followPlayerOffset.normalized * distance);
 
+        Vector3 newPos = Vector3.SmoothDamp(transform.position, targetPos, ref velocitySmooth, moveSmoothTime);
+
+        /*
+        float h = Mathf.Abs(targetPos.y - playerTransform.position.y);
+
+        
+        //limit XZ distance to sphereically curve the path
+        float sphDistXZ = Mathf.Sqrt(distance * distance - h * h);
+        print(sphDistXZ);
+
+        Vector3 plXZ = new Vector3(playerTransform.position.x, 0, playerTransform.position.z);
+        Vector3 npXZ = new Vector3(newPos.x, 0, newPos.z);
+
+        float dXZ = Vector3.Distance(plXZ, npXZ);
+
+        if(dXZ != sphDistXZ)
+        {
+            npXZ = npXZ.normalized * sphDistXZ;
+        }
+
+        npXZ.y = newPos.y;
+        newPos = npXZ;*/
+
         //uses line as path
-        transform.position = Vector3.SmoothDamp(transform.position, targetPos, ref velocitySmooth, moveSmoothTime);
+        transform.position = newPos;
 
         if(lookAtPlayer)
         {
-            Quaternion rot = Quaternion.LookRotation(playerTransform.position - targetPos);
-            transform.rotation = Quaternion.RotateTowards(transform.rotation, rot, lookAtSmoothSpeed * Time.deltaTime);
+            Quaternion rot = Quaternion.LookRotation(playerTransform.position - transform.position);
+            Vector3 angles = rot.eulerAngles;
+            //transform.rotation = Quaternion.RotateTowards(transform.rotation, rot, lookAtSmoothSpeed * Time.deltaTime);
+            transform.eulerAngles = smoothDampAngles(transform.eulerAngles, angles, ref rotationSmooth, lookAtSmoothTime);
+            //transform.rotation = rot;
+
+            Vector3 smoothDampAngles(Vector3 s, Vector3 e, ref Vector3 v, float t)
+            {
+                return new Vector3( Mathf.SmoothDampAngle(s.x, e.x, ref v.x, t),
+                                    Mathf.SmoothDampAngle(s.y, e.y, ref v.y, t),
+                                    Mathf.SmoothDampAngle(s.z, e.z, ref v.z, t));
+            }
+
         }
+
+        CheckRaycast();
 
     }
 
@@ -180,8 +286,10 @@ public class PlayerCamera : MonoBehaviour
         if (lookAtWorld)
         {
             Quaternion rot = Quaternion.LookRotation(World.main.WorldCenter - targetPos);
-            transform.rotation = Quaternion.RotateTowards(transform.rotation, rot, lookAtSmoothSpeed * Time.deltaTime);
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, rot, lookAtSmoothTime * Time.deltaTime);
         }
+
+        CheckRaycast();
 
     }
 
@@ -193,10 +301,12 @@ public class PlayerCamera : MonoBehaviour
     void Awake()
     {
 
+        main = this;
+
         //init state machine
-        sm = new StateMachine<PlayerCameraStates>(PlayerCameraStates.Idle);
-        sm.Methods[PlayerCameraStates.FollowPlayer] = FollowPlayer;
-        sm.Methods[PlayerCameraStates.LookAtWorld] = LookAtWorld;
+        CameraState = new StateMachine<PlayerCameraStates>(PlayerCameraStates.Idle);
+        CameraState.Methods[PlayerCameraStates.FollowPlayer] = FollowPlayer;
+        CameraState.Methods[PlayerCameraStates.LookAtWorld] = LookAtWorld;
 
         //find player transfrom if needed
         if(!playerTransform)
@@ -209,21 +319,39 @@ public class PlayerCamera : MonoBehaviour
     // Update is called once per frame
     void LateUpdate()
     {
-        sm.Execute();
+        CameraState.Execute();
+
+        if(pts.Count < ptsc)
+        {
+            pts.Add(transform.position);
+        } else
+        {
+            pts[ptsi] = transform.position;
+        }
+        ptsi = (ptsi + 1) % ptsc;
     }
 
-    /*
+    public void ResetToDefault()
+    {
+        if (CameraState.State != PlayerCameraStates.Idle)
+            CameraState.SwitchState(PlayerCameraStates.Idle);
+        transform.position = defaultPosition;
+        transform.eulerAngles = defaultEulerAngles;
+    }
+
+
+    List<Vector3> pts = new List<Vector3>();
+    int ptsc = 500, ptsi = 0;
+
+    
     private void OnDrawGizmos()
     {
-        Gizmos.color = Color.red;
-        Vector3[] dots = new Vector3[100];
-        for(int i = 0; i < dots.Length; i++)
+        Gizmos.color = Color.blue;
+        for(int i = 1; i < pts.Count; i++)
         {
-            dots[i] = VectorCurveLerp(Vector3.zero, new Vector3(1, 0, 1), offsetPathCurve, (float)i / dots.Length);
-            if(i > 0)
-            {
-                Gizmos.DrawLine(dots[i - 1], dots[i]);
-            }
+            if (i == ptsi)
+                continue;
+            Gizmos.DrawLine(pts[i - 1], pts[i]);
         }
-    }*/
+    }
 }
