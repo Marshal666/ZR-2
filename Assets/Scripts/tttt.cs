@@ -357,6 +357,14 @@ public class tttt : MonoBehaviour
         */
         #endregion
 
+        #region CLCHT
+        /*
+        GameObject g = GameObject.Find("GGG");
+        print(g);
+        Scene.ClearChildren(g.transform);
+        */
+        #endregion
+
     }
 
     private void Update()
