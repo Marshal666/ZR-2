@@ -17,8 +17,8 @@ public class GameData : MonoBehaviour
     /// <summary>
     /// Indexes of blocks for cell drawing
     /// </summary>
-    public List<GameObject> buildingBlocks = new List<GameObject>();
-    public static List<GameObject> BuildingBlocks { get { return main.buildingBlocks; } }
+    public List<CellLook> buildingBlocks = new List<CellLook>();
+    public static List<CellLook> BuildingBlocks { get { return main.buildingBlocks; } }
 
     /// <summary>
     /// Material used for roads
