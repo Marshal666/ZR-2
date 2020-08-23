@@ -164,10 +164,24 @@ public class PlayerCamera : MonoBehaviour
 
         if(Physics.Raycast(ray, out hit, raycastDistance, CellLayers))
         {
-
-            if(hit.transform.parent)
+            //search for parent cell
+            //limit levels of going up to 4
+            int cutoff = 4;
+            Cell cell = null;
+            Transform t = hit.transform.parent;
+            while(cutoff > 0 && cell == null)
             {
-                Cell cell = hit.transform.parent.GetComponent<Cell>();
+                if (!t)
+                    break;
+                Cell c = t.GetComponent<Cell>();
+                if (c)
+                    cell = c;
+                t = t.parent;
+                cutoff--;
+            }
+
+            if(cell)
+            {
                 if(cell != currentCell)
                 {
                     if (currentCell != null)
