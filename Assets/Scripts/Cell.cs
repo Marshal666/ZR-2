@@ -22,6 +22,21 @@ public class Cell : MonoBehaviour
     public bool BeingPreviewed = false;
 
     /// <summary>
+    /// Reference to an instantiated negative object for this cell, used when Number1 < 0
+    /// </summary>
+    public GameObject Negative;
+
+    /// <summary>
+    /// Reference to an instantiated ruin object for this cell, used when Number1 == 0
+    /// </summary>
+    public GameObject Zero;
+
+    /// <summary>
+    /// Refrence to an instantianted empty child that holds building blocks, used when Number1 > 0
+    /// </summary>
+    public GameObject Positives;
+
+    /// <summary>
     /// Script init
     /// </summary>
     private void Awake()
@@ -64,21 +79,53 @@ public class Cell : MonoBehaviour
 
         PreviewChanges += BasePreview;
         RemovePreviewChanges += BaseRemovePreview;
+
+        if (!Negative)
+        {
+            Negative = Instantiate(GameData.BuildingBlocks[Data.BuildingType].Negative);
+            Negative.transform.position = transform.position;
+            Negative.transform.SetParent(transform);
+            Negative.SetActive(false);
+        }
+        if (!Zero)
+        {
+            Zero = Instantiate(GameData.BuildingBlocks[Data.BuildingType].Zero);
+            Zero.transform.position = transform.position;
+            Zero.transform.SetParent(transform);
+            Zero.SetActive(false);
+        }
+        if (!Positives)
+        {
+            Positives = new GameObject("Positives");
+            Positives.transform.position = transform.position;
+            Positives.transform.SetParent(transform);
+            Positives.SetActive(false);
+        }
+
     }
 
     /// <summary>
-    /// Draws cell objects
+    /// Draws cell objects, should be called only once after Init()
     /// </summary>
     public void Draw()
     {
-
-        for (int i = 0; i < Data.Number1; i++)
+        if (Data.Number1 < 0)
         {
-            GameObject g = Instantiate(GameData.BuildingBlocks[Data.BuildingType]);
-            g.transform.SetParent(transform);
-            g.transform.localPosition = Vector3.up * i;
+            Negative.SetActive(true);
         }
-
+        else if (Data.Number1 > 0)
+        {
+            Positives.SetActive(true);
+            for (int i = 0; i < Data.Number1; i++)
+            {
+                GameObject g = Instantiate(GameData.BuildingBlocks[Data.BuildingType].Positive);
+                g.transform.SetParent(Positives.transform);
+                g.transform.localPosition = Vector3.up * i;
+            }
+        } else
+        {
+            Zero.SetActive(true);
+        }
     }
 
     /// <summary>
@@ -86,76 +133,157 @@ public class Cell : MonoBehaviour
     /// </summary>
     public void Redraw()
     {
-
-        for(int i = 0; i < Mathf.Max(Data.Number1, transform.childCount); i++)
+        Negative.SetActive(false);
+        Zero.SetActive(false);
+        Positives.SetActive(false);
+        if (Data.Number1 > 0)
         {
-            GameObject o;
-            if (i < transform.childCount) {
-                o = transform.GetChild(i).gameObject;
+            Positives.SetActive(true);
+            for (int i = 0; i < Mathf.Max(Data.Number1, Positives.transform.childCount); i++)
+            {
+                GameObject o;
+                if (i < Positives.transform.childCount)
+                {
+                    o = Positives.transform.GetChild(i).gameObject;
+                }
+                else
+                {
+                    o = Instantiate(GameData.BuildingBlocks[Data.BuildingType].Positive);
+                    o.transform.SetParent(Positives.transform);
+                    o.transform.localPosition = Vector3.up * i;
+                }
+                o.SetActive(i < Data.Number1);
             }
-            else {
-                o = Instantiate(GameData.BuildingBlocks[Data.BuildingType]);
-                o.transform.SetParent(transform);
-                o.transform.localPosition = Vector3.up * i;
-            }
-            o.SetActive(i < Data.Number1);
+        } else if(Data.Number1 < 0)
+        {
+            Negative.SetActive(true);
+        } else
+        {
+            Zero.SetActive(true);
         }
 
     }
 
     public void DrawPreview(int newNumber1)
     {
-        for (int i = 0; i < Mathf.Max(newNumber1, Data.Number1, transform.childCount); i++)
+        Positives.SetActive(false);
+        Zero.SetActive(false);
+        Negative.SetActive(false);
+        if (newNumber1 > 0)
         {
-            GameObject o;
-            if (i < transform.childCount)
+            Positives.SetActive(true);
+            for (int i = 0; i < Mathf.Max(newNumber1, Data.Number1, Positives.transform.childCount); i++)
             {
-                o = transform.GetChild(i).gameObject;
-            }
-            else
-            {
-                o = Instantiate(GameData.BuildingBlocks[Data.BuildingType]);
-                o.transform.SetParent(transform);
-                o.transform.localPosition = Vector3.up * i;
-            }
-            o.SetActive(i < newNumber1 || i < Data.Number1);
-
-            void SetSemiTransparentColor()
-            {
-                MeshRenderer mr = o.GetComponent<MeshRenderer>();
-                if (mr.material)
+                GameObject o;
+                if (i < Positives.transform.childCount)
                 {
-                    Color c = mr.material.color;
-                    c.a = GameData.SemiTransparentCellColor;
-                    mr.material.color = c;
+                    o = Positives.transform.GetChild(i).gameObject;
                 }
-            }
-
-            //print("nn1: " + newNumber1 + " n1: " + Data.Number1);
-
-            if(newNumber1 < Data.Number1)
-            {
-                if(i > newNumber1 - 1)
+                else
                 {
-                    SetSemiTransparentColor();
-                    //print("stc");
+                    o = Instantiate(GameData.BuildingBlocks[Data.BuildingType].Positive);
+                    o.transform.SetParent(Positives.transform);
+                    o.transform.localPosition = Vector3.up * i;
                 }
-            } else if(newNumber1 > Data.Number1)
-            {
-                if(i >= Data.Number1 - 1)
+                o.SetActive(i < newNumber1 || i < Data.Number1);
+
+                void SetSemiTransparentColor()
                 {
-                    SetSemiTransparentColor();
-                    //print("stc");
+                    MeshRenderer mr = o.GetComponent<MeshRenderer>();
+                    if (mr.material)
+                    {
+                        Color c = mr.material.color;
+                        c.a = GameData.SemiTransparentCellColor;
+                        mr.material.color = c;
+                    }
                 }
+
+                //print("nn1: " + newNumber1 + " n1: " + Data.Number1);
+
+                if (newNumber1 < Data.Number1)
+                {
+                    if (i > newNumber1 - 1)
+                    {
+                        SetSemiTransparentColor();
+                        //print("stc");
+                    }
+                }
+                else if (newNumber1 > Data.Number1)
+                {
+                    if (i >= Data.Number1 - 1)
+                    {
+                        SetSemiTransparentColor();
+                        //print("stc");
+                    }
+                }
+
+
             }
-
-
+        } else if(newNumber1 < 0)
+        {
+            Negative.SetActive(true);
+        } else
+        {
+            Zero.SetActive(true);
         }
     }
 
     public void UnDrawPreview()
     {
 
+        Negative.SetActive(false);
+        Zero.SetActive(false);
+        Positives.SetActive(false);
+        if (Data.Number1 > 0)
+        {
+            Positives.SetActive(true);
+            for (int i = 0; i < Mathf.Max(Data.Number1, Positives.transform.childCount); i++)
+            {
+                GameObject o;
+                if (i < Positives.transform.childCount)
+                {
+                    o = Positives.transform.GetChild(i).gameObject;
+                }
+                else
+                {
+                    o = Instantiate(GameData.BuildingBlocks[Data.BuildingType].Positive);
+                    o.transform.SetParent(Positives.transform);
+                    o.transform.localPosition = Vector3.up * i;
+                }
+                o.SetActive(i < Data.Number1);
+
+                
+
+                SetNormalTransparency(o);
+
+            }
+        }
+        else if (Data.Number1 < 0)
+        {
+            Negative.SetActive(true);
+        }
+        else
+        {
+            Zero.SetActive(true);
+        }
+
+        for(int i = 0; i < Positives.transform.childCount; i++)
+        {
+            SetNormalTransparency(Positives.transform.GetChild(i).gameObject);
+        }
+
+        void SetNormalTransparency(GameObject o)
+        {
+            MeshRenderer mr = o.GetComponent<MeshRenderer>();
+            if (mr.material)
+            {
+                Color c = mr.material.color;
+                c.a = GameData.DefaultCellAlphaColor;
+                mr.material.color = c;
+            }
+        }
+
+        /*
         for (int i = 0; i < Mathf.Max(Data.Number1, transform.childCount); i++)
         {
             GameObject o;
@@ -183,7 +311,7 @@ public class Cell : MonoBehaviour
             }
 
             SetNormalTransparency();
-        }
+        }*/
 
     }
 
@@ -195,9 +323,9 @@ public class Cell : MonoBehaviour
     {
         if(o)
         {
-            for(int i = transform.childCount - 1; i >= 0; i--)
+            for(int i = Positives.transform.childCount - 1; i >= 0; i--)
             {
-                Transform ch = transform.GetChild(i);
+                Transform ch = Positives.transform.GetChild(i);
                 if(ch.gameObject.activeSelf)
                 {
                     //Add height factor maybe?
