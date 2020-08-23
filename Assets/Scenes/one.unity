@@ -2472,10 +2472,26 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   buildingBlocks:
-  - {fileID: 6571484454901053929, guid: 7e7f1c23dce86704bba424777352ffc7, type: 3}
-  - {fileID: 6571484454901053929, guid: 0b152efb15283ed48a8832532370ff74, type: 3}
-  - {fileID: 6571484454901053929, guid: 1db17161455ae784491478008b2e758f, type: 3}
-  - {fileID: 6571484454901053929, guid: 8b726ef8edc79dd49808a78cd5d40fc3, type: 3}
+  - Negative: {fileID: 3732029749241721235, guid: c28972ba43d18744b9ec974dfb367707,
+      type: 3}
+    Zero: {fileID: 4636433482657915681, guid: f96f68e2ede3ba94798a37bcafa913bf, type: 3}
+    Positive: {fileID: 6571484454901053929, guid: 7e7f1c23dce86704bba424777352ffc7,
+      type: 3}
+  - Negative: {fileID: 3732029749241721235, guid: c28972ba43d18744b9ec974dfb367707,
+      type: 3}
+    Zero: {fileID: 2140486593378619249, guid: e0790fdaddf57ac4894f6f32a051c533, type: 3}
+    Positive: {fileID: 6571484454901053929, guid: 0b152efb15283ed48a8832532370ff74,
+      type: 3}
+  - Negative: {fileID: 3732029749241721235, guid: c28972ba43d18744b9ec974dfb367707,
+      type: 3}
+    Zero: {fileID: 6490721737699330331, guid: 7706c677b5e38cb4b9428f26ab7b4852, type: 3}
+    Positive: {fileID: 6571484454901053929, guid: 1db17161455ae784491478008b2e758f,
+      type: 3}
+  - Negative: {fileID: 3732029749241721235, guid: c28972ba43d18744b9ec974dfb367707,
+      type: 3}
+    Zero: {fileID: 1373831156930196636, guid: fe8e18519ed5ec44f8ba527b182e03a4, type: 3}
+    Positive: {fileID: 6571484454901053929, guid: 8b726ef8edc79dd49808a78cd5d40fc3,
+      type: 3}
   roadMaterial: {fileID: 2100000, guid: 867d0e7a47f094d4b91ca303252a3528, type: 2}
   levelsContentHolder: {fileID: 772664925}
   localLevelsDirectory: Levels
