@@ -24,6 +24,12 @@ public class InputMapper : MonoBehaviour
 
     public KeyCode PauseKey = KeyCode.Escape;
 
+    public KeyCode HoverKey1 = KeyCode.LeftShift, HoverKey2 = KeyCode.Mouse2;
+
+    public KeyCode CellSelectKey = KeyCode.Mouse0;
+
+    public KeyCode CellIncreaseKey = KeyCode.Mouse0, CellACtionKey = KeyCode.LeftShift, CellDecreaseKey = KeyCode.Mouse1;
+
     public bool InvertMouseScroll = true;
 
     public static InputMapper main;
@@ -41,6 +47,12 @@ public class InputMapper : MonoBehaviour
     public bool Pause;
 
     public float CameraZoom = 0f;
+
+    public bool EditorHover;
+    public Vector3 EditorHoverValue;
+    public Vector3 EditorHoverValueOld;
+
+    public bool CellSelect, CellDeselect;
 
     private void Awake()
     {
@@ -83,6 +95,26 @@ public class InputMapper : MonoBehaviour
         Pause = Input.GetKeyDown(PauseKey);
 
         CameraZoom = Input.mouseScrollDelta.y * (InvertMouseScroll ? -1 : 1);
+
+        EditorHover = Input.GetKey(HoverKey1) & Input.GetKey(HoverKey2);
+
+        CellSelect = Input.GetKeyDown(CellSelectKey);
+
+        CellDeselect = Input.GetKeyDown(CellDecreaseKey);
+
+        if(EditorHover)
+        {
+            //Can't hover in 1st frame of it because it causes big delta jumps
+            if (EditorHoverValueOld != Vector3.zero)
+            {
+                EditorHoverValue = EditorHoverValueOld - Input.mousePosition;
+            }
+            EditorHoverValueOld = Input.mousePosition;
+        } else
+        {
+            EditorHoverValue = Vector3.zero;
+            EditorHoverValueOld = EditorHoverValue;
+        }
 
     }
 }
