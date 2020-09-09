@@ -15,6 +15,6 @@ public interface IGameEvent
 
     void Revert();
 
-    GameEventExecutionResult result { get; }
+    GameEventExecutionResult Result { get; }
 
 }
