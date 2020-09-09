@@ -323,6 +323,10 @@ public class Cell : MonoBehaviour
     {
         if(o)
         {
+            if(Positives.transform.childCount == 0)
+            {
+                o.transform.position = Positives.transform.position + Vector3.up;
+            }
             for(int i = Positives.transform.childCount - 1; i >= 0; i--)
             {
                 Transform ch = Positives.transform.GetChild(i);
