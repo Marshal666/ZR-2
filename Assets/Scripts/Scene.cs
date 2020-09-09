@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
@@ -10,13 +11,16 @@ using UnityEngine.UI;
 public class Scene : MonoBehaviour
 {
 
+    //References to UI objects
     public GameObject StartMenuObject = null;
     public GameObject LevelSelectMenuObject = null;
     public GameObject OptionsMenuObject = null;
+    public GameObject ToEditorMenuObject = null;
 
     public GameObject WonLostObject = null;
     public GameObject WonObjects = null;
     public GameObject LostObjects = null;
+    public GameObject EditorObjects = null;
 
     public GameObject MessageBox = null;
     public Text MessageBoxTitle = null;
@@ -45,7 +49,8 @@ public class Scene : MonoBehaviour
     {
         Start,
         LevelSelect,
-        Options
+        Options,
+        ToEditor
     }
 
     /// <summary>
@@ -117,6 +122,13 @@ public class Scene : MonoBehaviour
     public static EventSystem EventSystem { get { return main.Events; } }
 
     /// <summary>
+    /// Reference to UI Event System
+    /// </summary>
+    public UnityEngine.EventSystems.EventSystem uiEventSystem;
+
+    public static UnityEngine.EventSystems.EventSystem UIEventSystem { get { return main.uiEventSystem; } }
+
+    /// <summary>
     /// Script init
     /// </summary>
     private void Awake()
@@ -142,21 +154,28 @@ public class Scene : MonoBehaviour
         GameState.Switches[GameStates.Playing][GameStates.WonLost] = Playing2WonLost;
         GameState.Switches[GameStates.WonLost][GameStates.Menu] = WonLost2Menu;
 
+        GameState.Switches[GameStates.Menu][GameStates.Editor] = Menu2Editor;
+        GameState.Switches[GameStates.Editor][GameStates.Menu] = Editor2Menu;
+
         //init menu sm
         MenuState = new StateMachine<MenuStates>(MenuStates.Start);
 
         MenuState.Switches[MenuStates.Start][MenuStates.LevelSelect] = ToLevelSelect;
         MenuState.Switches[MenuStates.Start][MenuStates.Options] = ToOptions;
+        MenuState.Switches[MenuStates.Start][MenuStates.ToEditor] = To2Editor;
 
         MenuState.Switches[MenuStates.Options][MenuStates.Start] = ToStart;
 
         MenuState.Switches[MenuStates.LevelSelect][MenuStates.Start] = ToStart;
 
+        MenuState.Switches[MenuStates.ToEditor][MenuStates.Start] = ToStart;
+
         //init MenuObjects Dictionary
         MenuObjects = new Dictionary<MenuStates, GameObject>() { 
             { MenuStates.Start, StartMenuObject },
             { MenuStates.LevelSelect, LevelSelectMenuObject },
-            { MenuStates.Options, OptionsMenuObject }
+            { MenuStates.Options, OptionsMenuObject },
+            {MenuStates.ToEditor, ToEditorMenuObject }
         };
 
         //load Start UI (might not be neccesary)
@@ -277,6 +296,7 @@ public class Scene : MonoBehaviour
         WonLostObject.SetActive(false);
         WonObjects.SetActive(false);
         LostObjects.SetActive(false);
+        EditorObjects.SetActive(false);
 
         //disable message box
         MessageBox.SetActive(false);
@@ -320,6 +340,13 @@ public class Scene : MonoBehaviour
         SwitchUIToState(MenuStates.Options);
     }
 
+    void To2Editor()
+    {
+        SwitchUIToState(MenuStates.ToEditor);
+        UnLoadLevels2EditButtons();
+        LoadLevels2EditButtons();
+    }
+
     /// <summary>
     /// Loads LoadLevel Buttons
     /// </summary>
@@ -333,10 +360,12 @@ public class Scene : MonoBehaviour
 
             GameObject button = Instantiate(GameData.LoadLevelButton);
 
-            button.name = "LoadLevel" + levels[i];
+            string levelName = WorldData.PeekLevelName(levels[i]);
+
+            button.name = "LoadLevel" + levelName;
             Text txt = button.GetComponentInChildren<Text>();
             if (txt)
-                txt.text = levels[i];
+                txt.text = levelName;
 
             button.transform.SetParent(GameData.LevelsContentHolder, false);
 
@@ -359,6 +388,62 @@ public class Scene : MonoBehaviour
     public void UnLoadLevelButtons()
     {
         ClearChildren(GameData.LevelsContentHolder);
+    }
+
+    /// <summary>
+    /// Load LoadLevel buttons for editing
+    /// </summary>
+    public void LoadLevels2EditButtons()
+    {
+        //load level filenames
+        string[] levels = Directory.GetFiles(GameData.LocalLevelsDirectory);
+
+        for (int i = 0; i < levels.Length; i++)
+        {
+
+            GameObject button = Instantiate(GameData.LoadLevelButton);
+
+            string levelName = WorldData.PeekLevelName(levels[i]);
+
+            button.name = "LoadLevel" + levelName;
+            Text txt = button.GetComponentInChildren<Text>();
+            if (txt)
+                txt.text = levelName;
+
+            button.transform.SetParent(GameData.Levels2EditContentHolder, false);
+
+            string lvl = levels[i];
+            button.GetComponent<Button>()?.onClick.AddListener(
+                delegate {
+
+                    //TODO
+
+                    if(GameEditor.main.LoadLevel(lvl))
+                    {
+                        //level loaded for editing
+                    } else
+                    {
+                        ShowMessageBox("Level file is corrupt!", "Level loading failed");
+                    }
+
+                    /*if (World.main.LoadLevel(lvl))
+                    {
+                        GameState.SwitchState(GameStates.Playing);
+                    }
+                    else
+                    {
+                        //level loading failed
+                        ShowMessageBox("Level file is corrupt!", "Level loading failed");
+                    }*/
+
+                });
+
+        }
+    }
+
+    public void UnLoadLevels2EditButtons()
+    {
+        ClearChildren(GameData.Levels2EditContentHolder);
     }
 
     #endregion
@@ -415,6 +500,16 @@ public class Scene : MonoBehaviour
 
     void Editor()
     {
+
+        if (InputMapper.main.Undo)
+        {
+            Events.Undo();
+        }
+
+        if (InputMapper.main.Redo)
+        {
+            Events.Redo();
+        }
 
     }
 
@@ -493,6 +588,29 @@ public class Scene : MonoBehaviour
         ResetToDefault();
     }
 
+    void Menu2Editor()
+    {
+        DisableUI();
+        EditorObjects.SetActive(true);
+        GameEditor.main.Init();
+        playerCameraC.CameraState.SwitchState(PlayerCamera.PlayerCameraStates.EditorLookAtWorld);
+    }
+
+    void Editor2Menu()
+    {
+        DisableUI();
+
+        playerC.ResetToDefault();
+        World.main.ResetToDefault();
+        playerCameraC.ResetToDefault();
+        GameEditor.main.Clear();
+
+        MenuState.SwitchState(MenuStates.Start);
+
+        ResetToDefault();
+
+    }
+
     #endregion
 
     /// <summary>
@@ -568,7 +686,7 @@ public class Scene : MonoBehaviour
     }
 
     /// <summary>
-    /// Checks if player lost which is currently nothing
+    /// Checks if player lost which is currently nothing - TODO?
     /// </summary>
     /// <returns>True if player lost, false otherwize</returns>
     public static bool CheckPlayerLose()
