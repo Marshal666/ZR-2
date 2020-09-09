@@ -7,6 +7,8 @@ using System.Linq;
 using System.Diagnostics;
 using JetBrains.Annotations;
 
+#if UNITY_EDITOR
+
 public class tttt : MonoBehaviour
 {
 
@@ -365,11 +367,62 @@ public class tttt : MonoBehaviour
         */
         #endregion
 
+        #region OBJSPWNT
+        /*
+        GameObject pf = new GameObject("pf");
+        GameObject th = new GameObject("th");
+
+        ObjectSpawner o = new ObjectSpawner(pf, th.transform);
+
+        const int s = 20;
+        GameObject[] arr = new GameObject[s];
+
+        for(int i = 0; i < s; i++)
+        {
+            GameObject a = o.GetObject();
+            print(a + " " + a.GetHashCode());
+            arr[i] = a;
+        }
+
+        for (int i = 0; i < s; i++)
+        {
+            o.ReturnObject(arr[i]);
+            print("ret");
+        }
+
+        for (int i = 0; i < s; i++)
+        {
+            GameObject a = o.GetObject();
+            print(a + " " + a.GetHashCode());
+            arr[i] = a;
+        }
+
+        for (int i = 0; i < s; i++)
+        {
+            o.ReturnObject(arr[i]);
+            print("ret");
+        }
+
+        for (int i = 0; i < s / 4; i++)
+        {
+            GameObject a = o.GetObject();
+            print(a + " " + a.GetHashCode());
+            arr[i] = a;
+        }
+        */
+        #endregion
+
+        #region RECTTEST
+        /*
+        Rect r = new Rect(0f, 0f, 1f, 1f);
+        print(r.Contains(Vector2.one * .99999999f));*/
+        #endregion
+
     }
 
     private void Update()
     {
-
+        
         #region MARRAYNAV
         /*
         if(Input.GetKeyDown(KeyCode.A))
@@ -442,3 +495,5 @@ public class tttt : MonoBehaviour
     }
 
 }
+
+#endif
