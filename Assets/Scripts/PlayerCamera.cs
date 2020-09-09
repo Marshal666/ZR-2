@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using UnityEditor;
 using UnityEngine;
 using UnityEngineInternal;
 
@@ -102,7 +103,8 @@ public class PlayerCamera : MonoBehaviour
     {
         Idle,
         FollowPlayer,
-        LookAtWorld
+        LookAtWorld,
+        EditorLookAtWorld
     }
 
     /// <summary>
@@ -124,6 +126,16 @@ public class PlayerCamera : MonoBehaviour
     /// Layers of cells used for raycasting
     /// </summary>
     public LayerMask CellLayers;
+
+    /// <summary>
+    /// Offset of viewing world in editor
+    /// </summary>
+    public Vector3 XZEditorOffset;
+
+    /// <summary>
+    /// Speed of hovering in editor
+    /// </summary>
+    public float hoverSpeedFactor = .1f;
 
     /// <summary>
     /// Returns point from start to end, X and Y are lerped while Z is evaluated from curve
@@ -153,6 +165,14 @@ public class PlayerCamera : MonoBehaviour
     /// Cell that is under a raycast
     /// </summary>
     Cell currentCell = null;
+
+    public bool MouseOnScreenPart(Rect rect)
+    {
+        Vector2 mousePos = Input.mousePosition;
+        mousePos.Scale(new Vector2(1f / Screen.width, 1f / Screen.height));
+        mousePos.y = 1f - mousePos.y;
+        return rect.Contains(mousePos);
+    }
 
     void CheckRaycast()
     {
@@ -205,6 +225,18 @@ public class PlayerCamera : MonoBehaviour
 
         }
 
+    }
+
+    Vector3 smoothDampAngles(Vector3 s, Vector3 e, ref Vector3 v, float t)
+    {
+        return new Vector3(Mathf.SmoothDampAngle(s.x, e.x, ref v.x, t),
+                            Mathf.SmoothDampAngle(s.y, e.y, ref v.y, t),
+                            Mathf.SmoothDampAngle(s.z, e.z, ref v.z, t));
+    }
+
+    Vector3 clampVector(Vector3 val, Vector3 min, Vector3 max)
+    {
+        return new Vector3(Mathf.Clamp(val.x, min.x, max.x), Mathf.Clamp(val.y, min.y, max.y), Mathf.Clamp(val.z, min.z, max.z));
     }
 
     #region STATE_METHODS
@@ -260,17 +292,7 @@ public class PlayerCamera : MonoBehaviour
         {
             Quaternion rot = Quaternion.LookRotation(playerTransform.position - transform.position);
             Vector3 angles = rot.eulerAngles;
-            //transform.rotation = Quaternion.RotateTowards(transform.rotation, rot, lookAtSmoothSpeed * Time.deltaTime);
             transform.eulerAngles = smoothDampAngles(transform.eulerAngles, angles, ref rotationSmooth, lookAtSmoothTime);
-            //transform.rotation = rot;
-
-            Vector3 smoothDampAngles(Vector3 s, Vector3 e, ref Vector3 v, float t)
-            {
-                return new Vector3( Mathf.SmoothDampAngle(s.x, e.x, ref v.x, t),
-                                    Mathf.SmoothDampAngle(s.y, e.y, ref v.y, t),
-                                    Mathf.SmoothDampAngle(s.z, e.z, ref v.z, t));
-            }
-
         }
 
         CheckRaycast();
@@ -292,19 +314,64 @@ public class PlayerCamera : MonoBehaviour
             lookDirectionIndex = (lookDirectionIndex + 1) % lookAtPlayerVectorDirections.Length;
         }
 
-        Vector3 targetPos = World.main.WorldCenter + lookAtPlayerDirections[lookDirectionIndex] * lookAtWorldOffset;
+        distance += InputMapper.main.CameraZoom * zoomSpeed * Time.deltaTime;
+        distance = Mathf.Clamp(distance, distanceMin, distanceMax);
+
+        Vector3 targetPos = World.main.WorldCenter + lookAtPlayerDirections[lookDirectionIndex] * (lookAtWorldOffset.normalized * distance);
 
         //same problem
         transform.position = Vector3.SmoothDamp(transform.position, targetPos, ref velocitySmooth, moveSmoothTime);
 
         if (lookAtWorld)
         {
+            /*Quaternion rot = Quaternion.LookRotation(World.main.WorldCenter - targetPos);
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, rot, lookAtSmoothTime * Time.deltaTime);*/
             Quaternion rot = Quaternion.LookRotation(World.main.WorldCenter - targetPos);
-            transform.rotation = Quaternion.RotateTowards(transform.rotation, rot, lookAtSmoothTime * Time.deltaTime);
+            Vector3 angles = rot.eulerAngles;
+            transform.eulerAngles = smoothDampAngles(transform.eulerAngles, angles, ref rotationSmooth, lookAtSmoothTime);
         }
 
         CheckRaycast();
 
+    }
+
+    void EditorLookAtWorld()
+    {
+        //TODO: make path from position to targetPos curvy/sphereical instead of a line
+
+        if (InputMapper.main.CameraRotateLeft)
+        {
+            lookDirectionIndex = lookDirectionIndex - 1 < 0 ? lookAtPlayerVectorDirections.Length - 1 : lookDirectionIndex - 1;
+        }
+
+        if (InputMapper.main.CameraRotateRight)
+        {
+            lookDirectionIndex = (lookDirectionIndex + 1) % lookAtPlayerVectorDirections.Length;
+        }
+
+        if (MouseOnScreenPart(GameEditor.main.levelViewScreenSize) || Input.touchSupported)
+            distance += InputMapper.main.CameraZoom * zoomSpeed * Time.deltaTime;
+        distance = Mathf.Clamp(distance, distanceMin, distanceMax);
+
+        XZEditorOffset +=   lookAtPlayerDirections[lookDirectionIndex] * 
+                            new Vector3(InputMapper.main.EditorHoverValue.x, 0f, InputMapper.main.EditorHoverValue.y) * hoverSpeedFactor * Time.deltaTime;
+
+        
+        XZEditorOffset = clampVector(XZEditorOffset, World.main.WorldMinPoint, World.main.WorldMaxPoint);
+
+        Vector3 targetPos = World.main.WorldCenter + XZEditorOffset + lookAtPlayerDirections[lookDirectionIndex] * (lookAtWorldOffset.normalized * distance);
+
+        //same problem
+        transform.position = Vector3.SmoothDamp(transform.position, targetPos, ref velocitySmooth, moveSmoothTime);
+
+        if (lookAtWorld)
+        {
+            /*Quaternion rot = Quaternion.LookRotation(World.main.WorldCenter - targetPos);
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, rot, lookAtSmoothTime * Time.deltaTime);*/
+            Quaternion rot = Quaternion.LookRotation(World.main.WorldCenter + XZEditorOffset - targetPos);
+            Vector3 angles = rot.eulerAngles;
+            transform.eulerAngles = smoothDampAngles(transform.eulerAngles, angles, ref rotationSmooth, lookAtSmoothTime);
+        }
     }
 
     #endregion
@@ -321,6 +388,7 @@ public class PlayerCamera : MonoBehaviour
         CameraState = new StateMachine<PlayerCameraStates>(PlayerCameraStates.Idle);
         CameraState.Methods[PlayerCameraStates.FollowPlayer] = FollowPlayer;
         CameraState.Methods[PlayerCameraStates.LookAtWorld] = LookAtWorld;
+        CameraState.Methods[PlayerCameraStates.EditorLookAtWorld] = EditorLookAtWorld;
 
         //find player transfrom if needed
         if(!playerTransform)
@@ -357,7 +425,7 @@ public class PlayerCamera : MonoBehaviour
     List<Vector3> pts = new List<Vector3>();
     int ptsc = 500, ptsi = 0;
 
-    
+#if UNITY_EDITOR
     private void OnDrawGizmos()
     {
         Gizmos.color = Color.blue;
@@ -368,4 +436,6 @@ public class PlayerCamera : MonoBehaviour
             Gizmos.DrawLine(pts[i - 1], pts[i]);
         }
     }
+#endif
+
 }
