@@ -20,6 +20,8 @@ public class WorldData
         //.... add more?
     }
 
+    public string LevelName;
+
     public GameTypes GameType = GameTypes.SumToZero;
 
     public int[][] CellGroups;
@@ -44,6 +46,8 @@ public class WorldData
         {
 
             StreamReader r = new StreamReader(file);
+
+            LevelName = r.ReadLine();
 
             //load game type
             string gameTypeString = r.ReadLine();
@@ -111,6 +115,8 @@ public class WorldData
 
             }
 
+            r.Close();
+
         }
 #pragma warning disable CS0168 // Variable is declared but never used
         catch (Exception e)
@@ -118,7 +124,33 @@ public class WorldData
         {
             return false;
         }
+        
         return true;
+    }
+
+
+    /// <summary>
+    /// Used for corrupted levels
+    /// </summary>
+    static readonly string ErrorReadName = "File corrupted";
+
+    /// <summary>
+    /// Returns level name of a level in given file
+    /// </summary>
+    /// <param name="file">File which contains level data</param>
+    /// <returns>Level name of given file</returns>
+    public static string PeekLevelName(string file)
+    {
+        string rt;
+        try
+        {
+            StreamReader r = new StreamReader(file);
+            rt = r.ReadLine();
+        } catch (Exception)
+        {
+            return ErrorReadName;
+        }
+        return rt;
     }
 
     public override string ToString()
@@ -127,6 +159,8 @@ public class WorldData
         const char nl = '\n';
 
         StringBuilder sb = new StringBuilder();
+        sb.Append(LevelName);
+        sb.Append(nl);
         sb.Append(GameType.ToString());
         sb.Append(nl);
         sb.Append(CellGroups.Length);
