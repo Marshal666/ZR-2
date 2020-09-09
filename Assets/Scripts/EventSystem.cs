@@ -30,7 +30,7 @@ public class EventSystem
     public void AddEvent(IGameEvent e)
     {
 
-        if (e.result == GameEventExecutionResult.Failed)
+        if (e.Result == GameEventExecutionResult.Failed)
             return;
 
         Events[currentPos] = e;
