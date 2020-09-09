@@ -33,6 +33,12 @@ public class GameData : MonoBehaviour
     public static RectTransform LevelsContentHolder { get { return main.levelsContentHolder; } }
 
     /// <summary>
+    /// UI object that stores levels access buttons for editing
+    /// </summary>
+    public RectTransform levels2EditContentHolder;
+    public static RectTransform Levels2EditContentHolder { get { return main.levels2EditContentHolder; } }
+
+    /// <summary>
     /// Folder with level files
     /// </summary>
     public string localLevelsDirectory;
