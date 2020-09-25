@@ -39,6 +39,7 @@ public class GameEditorRename : IGameEvent
         {
             Scene.main.ShowMessageBox("Level name cannot be empty", "Editor message");
             res = GameEventExecutionResult.Failed;
+            ed.levelNameEditorField.text = oldName;
             return;
         }
 
@@ -289,6 +290,75 @@ public class GameEditorRemoveCellGroup : IGameEvent
         ed.EditorState.State = State;
 
         ed.ReDrawCellGroupControls(true, GroupID);
+
+    }
+}
+
+
+
+public class GameEditorEditCellData : IGameEvent
+{
+
+    GameEventExecutionResult res = GameEventExecutionResult.Failed;
+
+    CellData oldData;
+    CellData newData;
+    EditorCell cell;
+    GameEditor.GameEditorState state;
+
+    GameEditor ed;
+
+    public GameEventExecutionResult Result { get { return res; } }
+
+    public GameEditorEditCellData(GameEditor ed, EditorCell cell, CellData newData)
+    {
+        this.ed = ed;
+        this.cell = cell;
+
+        if (!cell)
+            return;
+        this.oldData = ed.LevelData.CellDatas.OneDimensional[cell.index];
+
+        this.newData = newData;
+        this.state = ed.EditorState.State;
+
+
+        Execute();
+    }
+
+    public void Execute()
+    {
+        if (!cell)
+            return;
+
+        ed.LevelData.CellDatas.OneDimensional[cell.index] = newData;
+        World.main.Cells.OneDimensional[cell.index].Data = newData;
+
+        ed.currentEditorObject = cell;
+        ed.RedrawCellInspectorUI();
+        ed.ReDrawCellEditingObjects();
+
+        ed.EditorState.State = GameEditor.GameEditorState.EditingCell;
+        ed.currentEditorObject = cell;
+
+        cell.FitToContent();
+
+        res = GameEventExecutionResult.Success;
+    }
+
+    public void Revert()
+    {
+        ed.LevelData.CellDatas.OneDimensional[cell.index] = oldData;
+        World.main.Cells.OneDimensional[cell.index].Data = oldData;
+
+        ed.currentEditorObject = cell;
+
+        ed.ReDrawCellEditingObjects();
+        ed.RedrawCellInspectorUI();
+        ed.currentEditorObject = cell;
+        ed.EditorState.State = state;
+
+        cell.FitToContent();
 
     }
 }

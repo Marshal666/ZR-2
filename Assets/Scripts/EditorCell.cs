@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class EditorCell : MonoBehaviour
+public class EditorCell : EditorObject
 {
 
     /// <summary>
@@ -27,7 +27,7 @@ public class EditorCell : MonoBehaviour
     }
 
     /// <summary>
-    /// Fits cells box collider to fit its content
+    /// Fits box collider to include all cells children
     /// </summary>
     public void FitToContent()
     {

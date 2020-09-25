@@ -37,6 +37,11 @@ public class Cell : MonoBehaviour
     public GameObject Positives;
 
     /// <summary>
+    /// 1D index of this cell in Cells MArray object
+    /// </summary>
+    public int Index;
+
+    /// <summary>
     /// Script init
     /// </summary>
     private void Awake()
@@ -321,11 +326,16 @@ public class Cell : MonoBehaviour
     /// <param name="o"></param>
     public void DrawAbove(GameObject o)
     {
-        if(o)
+
+        Vector3 additionalHeight = Vector3.zero;
+        if (Scene.Player.CurrentPosition != null && Index == World.main.Cells.getIndex(Scene.Player.CurrentPosition))
+            additionalHeight += Vector3.up;
+
+        if (o)
         {
             if(Positives.transform.childCount == 0)
             {
-                o.transform.position = Positives.transform.position + Vector3.up;
+                o.transform.position = Positives.transform.position + Vector3.up + additionalHeight;
             }
             for(int i = Positives.transform.childCount - 1; i >= 0; i--)
             {
@@ -333,7 +343,7 @@ public class Cell : MonoBehaviour
                 if(ch.gameObject.activeSelf)
                 {
                     //Add height factor maybe?
-                    o.transform.position = ch.position + Vector3.up;
+                    o.transform.position = ch.position + Vector3.up + additionalHeight;
                     return;
                 }
             }
@@ -566,6 +576,11 @@ public class Cell : MonoBehaviour
     {
         if(World.main.CellGroups != null)
         {
+
+            //increaser can only increase existing cell groups
+            if (Data.AffectedCellGroup < 0 || Data.AffectedCellGroup >= World.main.CellGroups.Length)
+                return;
+
             //get belonging cell group
             int[] AffectedCellGroup = World.main.CellGroups[Data.AffectedCellGroup];
 
@@ -620,6 +635,10 @@ public class Cell : MonoBehaviour
     {
         if (World.main.CellGroups != null)
         {
+
+            //increaser can only increase existing cell groups
+            if (Data.AffectedCellGroup < 0 || Data.AffectedCellGroup >= World.main.CellGroups.Length)
+                return;
 
             //get belonging cell group
             int[] AffectedCellGroup = World.main.CellGroups[Data.AffectedCellGroup];
@@ -688,6 +707,9 @@ public class Cell : MonoBehaviour
     {
         if(!BeingPreviewed)
         {
+            if (Data.AffectedCellGroup < 0 || Data.AffectedCellGroup >= World.main.CellGroups.Length)
+                return;
+
             int[] cells = World.main.CellGroups[Data.AffectedCellGroup];
             for(int i = 0; i < cells.Length; i++)
             {
@@ -700,6 +722,9 @@ public class Cell : MonoBehaviour
     {
         if(BeingPreviewed)
         {
+            if (Data.AffectedCellGroup < 0 || Data.AffectedCellGroup >= World.main.CellGroups.Length)
+                return;
+
             int[] cells = World.main.CellGroups[Data.AffectedCellGroup];
             for (int i = 0; i < cells.Length; i++)
             {

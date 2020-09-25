@@ -2,41 +2,35 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-#if UNITY_EDITOR
-
-using UnityEditor;
-
-[CustomEditor(typeof(Player))]
-[CanEditMultipleObjects]
-public class PlayerEditor : Editor
+/// <summary>
+/// Player editor component, used only in raycasting
+/// </summary>
+public class PlayerEditor : EditorObject
 {
 
-    SerializedProperty currentPos;
+    public Outline outline;
 
-    private void OnEnable()
+    private void Awake()
     {
-        currentPos = serializedObject.FindProperty("CurrentPosition");
+        if(!outline)
+        {
+            outline = GetComponentInChildren<Outline>();
+        }
+
+        if(outline)
+        {
+            outline.enabled = false;
+        }
     }
 
-    public override void OnInspectorGUI()
+    public void EnableOutline()
     {
-        serializedObject.Update();
-        EditorGUILayout.PropertyField(currentPos);
-        Player pl = (Player)target;
-        EditorGUILayout.BeginHorizontal();
-        EditorGUILayout.LabelField("State: ");
-        if (pl && pl.PlayerState != null)
-        {
-            Player.PlayerStates st = (Player.PlayerStates)EditorGUILayout.EnumPopup(pl.PlayerState.State);
-            if (st != pl.PlayerState.State)
-            {
-                pl.PlayerState.SwitchState(st);
-            }
-        }
-        EditorGUILayout.EndHorizontal();
+        outline.enabled = true;
+    }
 
+    public void DisableOutline()
+    {
+        outline.enabled = false;
     }
 
 }
-
-#endif

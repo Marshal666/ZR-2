@@ -6,6 +6,10 @@ public class StateMachine<T> where T : struct, IConvertible     //T is enum
 
     private Dictionary<T, Action> methods;
 
+    private Dictionary<T, Action> stateEnterMethods;
+
+    private Dictionary<T, Action> stateExitMethods;
+
     private Dictionary<T, Dictionary<T, Action>> switches;
 
     T state;
@@ -24,6 +28,18 @@ public class StateMachine<T> where T : struct, IConvertible     //T is enum
         for(int i = 0; i < keys.Length; i++)
         {
             methods.Add(keys[i], null);
+        }
+
+        stateEnterMethods = new Dictionary<T, Action>(keys.Length);
+        for (int i = 0; i < keys.Length; i++)
+        {
+            stateEnterMethods.Add(keys[i], null);
+        }
+
+        stateExitMethods = new Dictionary<T, Action>(keys.Length);
+        for (int i = 0; i < keys.Length; i++)
+        {
+            stateExitMethods.Add(keys[i], null);
         }
 
         switches = new Dictionary<T, Dictionary<T, Action>>(keys.Length);
@@ -54,6 +70,18 @@ public class StateMachine<T> where T : struct, IConvertible     //T is enum
             methods.Add(keys[i], baseActs[i]);
         }
 
+        stateEnterMethods = new Dictionary<T, Action>(keys.Length);
+        for (int i = 0; i < keys.Length; i++)
+        {
+            stateEnterMethods.Add(keys[i], null);
+        }
+
+        stateExitMethods = new Dictionary<T, Action>(keys.Length);
+        for (int i = 0; i < keys.Length; i++)
+        {
+            stateExitMethods.Add(keys[i], null);
+        }
+
         switches = new Dictionary<T, Dictionary<T, Action>>(keys.Length);
         for (int i = 0; i < keys.Length; i++)
         {
@@ -71,8 +99,17 @@ public class StateMachine<T> where T : struct, IConvertible     //T is enum
     /// <param name="newState">New state for this machine</param>
     public void SwitchState(T newState)
     {
-        switches[state][newState]?.Invoke();
-        state = newState;
+        if (state.ToInt32(null) != newState.ToInt32(null))
+        {
+            stateExitMethods[state]?.Invoke();
+            switches[state][newState]?.Invoke();
+            stateEnterMethods[newState]?.Invoke();
+            state = newState;
+        } else
+        {
+            switches[state][newState]?.Invoke();
+            state = newState;
+        }
     }
 
     /// <summary>
@@ -84,8 +121,17 @@ public class StateMachine<T> where T : struct, IConvertible     //T is enum
         var m = switches[state][newState];
         if(m != null)
         {
-            m();
-            state = newState;
+            if (state.ToInt32(null) != newState.ToInt32(null))
+            {
+                stateExitMethods[state]?.Invoke();
+                m();
+                StateEnterMethods[newState]?.Invoke();
+                state = newState;
+            } else
+            {
+                m();
+                state = newState;
+            }
         }
     }
 
@@ -106,6 +152,17 @@ public class StateMachine<T> where T : struct, IConvertible     //T is enum
     /// State methods dictionary
     /// </summary>
     public Dictionary<T, Action> Methods { get { return methods; } }
+
+
+    /// <summary>
+    /// Methods called when machine enters their state
+    /// </summary>
+    public Dictionary<T, Action> StateEnterMethods { get { return stateEnterMethods; } }
+
+    /// <summary>
+    /// Methods called when machine exits their state
+    /// </summary>
+    public Dictionary<T, Action> StateExitMethods { get { return stateExitMethods; } }
 
     /// <summary>
     /// State switching methods dictionary

@@ -1,5 +1,6 @@
 All1 - always win
 SumToZero
+(0, 0)
 0
 4 4
 

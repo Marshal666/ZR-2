@@ -14,10 +14,10 @@ public struct CellData
     public enum CellType
     {
         Default = 1,
-        Start = 2,
-        TeleportIn = 4,
-        ReachCell = 8,
-        Increaser = 16
+        //Start = 2,
+        TeleportIn = 2,
+        ReachCell = 4,
+        Increaser = 8
     }
 
     /// <summary>
@@ -106,6 +106,8 @@ public struct CellData
         sb.Append(", ");
         sb.Append(Number2);
         sb.Append(", ");
+        sb.Append(Number3);
+        sb.Append(", ");
         sb.Append(BuildingType);
         sb.Append(", ");
         sb.Append(AffectedCellGroup);
@@ -136,6 +138,49 @@ public struct CellData
         cd.AffectedCellGroup = int.Parse(data[5]);
 
         return cd;
+    }
+
+    public override bool Equals(object obj)
+    {
+        return this == (CellData)obj;
+    }
+
+    public override int GetHashCode()
+    {
+        return base.GetHashCode();
+    }
+
+    public static bool operator ==(CellData a, CellData b) {
+        if (a.Number1 != b.Number1)
+            return false;
+        if (a.Number2 != b.Number2)
+            return false;
+        if (a.Number3 != b.Number3)
+            return false;
+        if (a.Type != b.Type)
+            return false;
+        if (a.AffectedCellGroup != b.AffectedCellGroup)
+            return false;
+        if (a.BuildingType != b.BuildingType)
+            return false;
+        return true;
+    }
+
+    public static bool operator !=(CellData a, CellData b)
+    {
+        if (a.Number1 != b.Number1)
+            return true;
+        if (a.Number2 != b.Number2)
+            return true;
+        if (a.Number3 != b.Number3)
+            return true;
+        if (a.Type != b.Type)
+            return true;
+        if (a.AffectedCellGroup != b.AffectedCellGroup)
+            return true;
+        if (a.BuildingType != b.BuildingType)
+            return true;
+        return false;
     }
 
 }

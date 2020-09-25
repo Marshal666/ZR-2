@@ -164,9 +164,11 @@ public class World : MonoBehaviour, IWorldRenderer
                     cell.transform.localPosition = Vector3.right * j * buildingDistance;
 
                     Cells.OneDimensional[ci] = cell.AddComponent<Cell>();
+                    Cells.OneDimensional[ci].Index = ci;
                     Cells.OneDimensional[ci].Data = data.CellDatas.OneDimensional[ci];
                     Cells.OneDimensional[ci].Init();
                     Cells.OneDimensional[ci].Draw();
+                    
 
                     switch (data.GameType)
                     {
@@ -184,14 +186,19 @@ public class World : MonoBehaviour, IWorldRenderer
                             break;
                     }
 
-                    if ((Cells.OneDimensional[ci].Data.Type & CellData.CellType.Start) == CellData.CellType.Start)
-                        Scene.Player.CurrentPosition = Cells.getCoords(ci);
+                    //if ((Cells.OneDimensional[ci].Data.Type & CellData.CellType.Start) == CellData.CellType.Start)
+                    //    Scene.Player.CurrentPosition = Cells.getCoords(ci);
 
                     ci++;
 
                 }
             }
         }
+
+        //position player
+        Scene.Player.CurrentPosition = new int[data.PlayerStartPosition.Length];
+        Array.Copy(data.PlayerStartPosition, Scene.Player.CurrentPosition, data.PlayerStartPosition.Length);
+
     }
 
     public bool LoadLevel(string file)

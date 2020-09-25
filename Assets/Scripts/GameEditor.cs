@@ -1,7 +1,12 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Net.Mime;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Security;
 using System.Text;
 using UnityEngine;
 using UnityEngine.UI;
@@ -13,7 +18,8 @@ public class GameEditor : MonoBehaviour, IWorldRenderer
     {
         Idle,
         ConfiguringCellGroups,
-        EditingCell
+        EditingCell,
+        EditingPlayer, //position
     }
 
     public StateMachine<GameEditorState> EditorState = new StateMachine<GameEditorState>(GameEditorState.Idle);
@@ -49,12 +55,24 @@ public class GameEditor : MonoBehaviour, IWorldRenderer
 
     public RectTransform cellGroupButtonsHolder;
 
+    public LayerMask PlayerLayer;
+
     public LayerMask CellEditorLayer;
     public int CellEditorLayerIndex = 9;
 
     public int currentCellGroup = -1;
 
+    public EditorObject currentEditorObject = null;
+
+    public PlayerEditor playerEditorObject;
+
+    /// <summary>
+    /// Cell that is under a raycast
+    /// </summary>
+    public EditorCell currentCell { get { return currentEditorObject as EditorCell; } }
+
     public GameObject arrowPointer;
+    public GameObject blueArrowPointer;
 
     public Rect levelViewScreenSize;
 
@@ -62,7 +80,51 @@ public class GameEditor : MonoBehaviour, IWorldRenderer
 
     public Color buttonSelectedColor = Color.grey, buttonUnselectedColor = Color.white;
 
+    public Toggle[] CellTypeToggles;
+
+    public CellTypeUIElement[] CellPropertyObjects;
+
+    public GameObject CellPropertiesInspectorHodler;
+
+    public Text CellNameText;
+
+    public UIChildPlacer CellPropertiesHolder;
+
+    public InputField[] CellNumbersInputFields;
+
+    [Serializable]
+    public class SaveLevelWindow
+    {
+        public GameObject Window;
+        public InputField LevelFilenameField;
+
+        public void Show()
+        {
+            Window.SetActive(true);
+        }
+
+        public void Hide()
+        {
+            Window.SetActive(false);
+        }
+
+    }
+
+    public SaveLevelWindow SaveLevelWindowObject;
+
+    
+    
+
     ObjectSpawner ArrowSpawner;
+
+    ObjectSpawner BlueArrowSpawner;
+
+    [Serializable]
+    public class CellTypeUIElement
+    {
+        public int ToggleIndex;
+        public GameObject UIElement;
+    }
 
     List<List<T>> JaggedArrayToLists<T>(T[][] arr)
     {
@@ -95,33 +157,31 @@ public class GameEditor : MonoBehaviour, IWorldRenderer
         }
         return ret;
     }
-
+    
     /// <summary>
-    /// Cell that is under a raycast
+    /// Checks if mouse it pointing at an editor cell
     /// </summary>
-    EditorCell currentCell = null;
-
-    void CheckRaycast()
+    EditorObject CheckRaycast(int layerMask)
     {
         const float raycastDistance = 1000f;
+        EditorObject o = null;
 
         RaycastHit hit;
         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
         //Debug.DrawRay(ray.origin, ray.direction * raycastDistance, Color.red);
 
-        if (Physics.Raycast(ray, out hit, raycastDistance, CellEditorLayer))
+        if (Physics.Raycast(ray, out hit, raycastDistance, layerMask))
         {
             //search for parent cell
             //limit levels of going up to 4
             int cutoff = 4;
             Transform t = hit.transform;
-            while (cutoff > 0 && currentCell == null)
+            currentEditorObject = null;
+            while (cutoff > 0 && o == null)
             {
                 if (!t)
                     break;
-                EditorCell c = t.GetComponent<EditorCell>();
-                if (c)
-                    currentCell = c;
+                o = t.GetComponent<EditorObject>();
                 t = t.parent;
                 cutoff--;
             }
@@ -134,6 +194,8 @@ public class GameEditor : MonoBehaviour, IWorldRenderer
 
         }
 
+        currentEditorObject = o;
+        return o;
     }
 
     private void Awake()
@@ -143,10 +205,22 @@ public class GameEditor : MonoBehaviour, IWorldRenderer
         EditorState.Methods[GameEditorState.Idle] = Idle;
         EditorState.Methods[GameEditorState.ConfiguringCellGroups] = ConfiguringCellGroups;
         EditorState.Methods[GameEditorState.EditingCell] = EditingCell;
+        EditorState.Methods[GameEditorState.EditingPlayer] = EditingPlayer;
+
+        EditorState.StateEnterMethods[GameEditorState.EditingPlayer] = EditingPlayerEnter;
+
+        EditorState.StateExitMethods[GameEditorState.EditingPlayer] = EditingPlayerExit;
 
         EditorState.Switches[GameEditorState.Idle][GameEditorState.ConfiguringCellGroups] = Idle2ConfiguringCellGroups;
         EditorState.Switches[GameEditorState.ConfiguringCellGroups][GameEditorState.Idle] = ConfiguringCellGroups2Idle;
         //EditorState.Switches[GameEditorState.ConfiguringCellGroups][GameEditorState.ConfiguringCellGroups] = ConfiguringCellGroups2Itself;
+
+        EditorState.Switches[GameEditorState.Idle][GameEditorState.EditingCell] = Idle2EditingCell;
+        EditorState.Switches[GameEditorState.EditingCell][GameEditorState.Idle] = EditingCell2Idle;
+
+        EditorState.Switches[GameEditorState.ConfiguringCellGroups][GameEditorState.EditingCell] = ConfiguringCellGroups2EditingCell;
+        EditorState.Switches[GameEditorState.EditingCell][GameEditorState.ConfiguringCellGroups] = EditingCell2ConfiguringCellGroups;
+
     }
 
     /// <summary>
@@ -221,6 +295,7 @@ public class GameEditor : MonoBehaviour, IWorldRenderer
 
         data.LevelName = name;
         data.GameType = WorldData.GameTypes.SumToZero;
+        data.PlayerStartPosition = new int[dimensions.Length];
 
         MArray<CellData> cells = new MArray<CellData>(dimensions);
         for (int i = 0; i < cells.OneDimensional.Length; i++)
@@ -259,6 +334,105 @@ public class GameEditor : MonoBehaviour, IWorldRenderer
             Scene.EventSystem.AddEvent(new GameEditorRemoveCellGroup(this, currentCellGroup));
     }
 
+    public void ApplyCellChanges()
+    {
+        //print("h");
+
+        if (currentCell)
+        {
+            CellData data = new CellData();
+
+            for (int i = 0; i < CellTypeToggles.Length; i++)
+            {
+                data.Type |= (CellData.CellType)((CellTypeToggles[i].isOn ? 1 : 0) * (int)Mathf.Pow(2, i));
+            }
+
+            if (CellNumbersInputFields.Length >= 4)
+            {
+                data.Number1 = int.Parse(CellNumbersInputFields[0].text);
+                data.Number2 = int.Parse(CellNumbersInputFields[1].text);
+                data.Number3 = int.Parse(CellNumbersInputFields[2].text);
+                data.AffectedCellGroup = int.Parse(CellNumbersInputFields[3].text);
+            }
+
+            //bools are always valid, only numbers need checking
+
+            if (data.Number1 > Limits.MaxCellNumber1)
+                data.Number1 = Limits.MaxCellNumber1;
+
+            if (data.Number2 < 0)
+                data.Number2 = 0;
+
+            if (data.Number2 >= World.main.Cells.OneDimensional.Length)
+                data.Number2 = World.main.Cells.OneDimensional.Length - 1;
+
+            if (data.Number3 > Limits.MaxCellNumber3)
+                data.Number3 = Limits.MaxCellNumber3;
+
+            //cell groups use no checking
+
+            //add event
+            if (data != LevelData.CellDatas.OneDimensional[currentCell.index])
+                Scene.EventSystem.AddEvent(new GameEditorEditCellData(this, currentCell, data));
+
+            /*
+            //revert back to old data
+            CellData oldData = World.main.Cells.OneDimensional[currentCell.index].Data;
+
+            for (int i = 0; i < Mathf.Min(CellTypeToggles.Length, sizeof(int) * 8); i++)
+            {
+                CellTypeToggles[i].SetIsOnWithoutNotify(((int)oldData.Type & (i << 1)) == 1);
+            }
+
+            CellNumbersInputFields[0].text = oldData.Number1.ToString();
+            CellNumbersInputFields[1].text = oldData.Number2.ToString();
+            CellNumbersInputFields[2].text = oldData.Number3.ToString();
+            CellNumbersInputFields[3].text = oldData.AffectedCellGroup.ToString();
+            */
+
+        }
+    }
+
+    public void SaveLevel()
+    {
+        LevelData.CellGroups = ListsToJaggedArray(CellGroupsLists);
+
+        SaveLevelWindowObject.Show();
+    }
+
+    public void CloseSaveLevelWindow()
+    {
+        SaveLevelWindowObject.Hide();
+    }
+
+    public void SaveLevelToFile()
+    {
+        string name = SaveLevelWindowObject.LevelFilenameField.text;
+        FileInfo f = null;
+        try
+        {
+            f = new FileInfo(name);
+            if (string.IsNullOrEmpty(f.Extension) || string.IsNullOrWhiteSpace(f.Extension))
+                name += GameData.DefaultSaveFileExtension;
+            //print(f.Extension);
+        } catch (Exception) { f = null; }
+        if(f is object)
+        {
+            if(File.Exists(name))
+            {
+                //TODO: show yes/no message box for overwrite
+            } else
+            {
+                SaveLevelDataToFile(name, LevelData);
+                SaveLevelWindowObject.Hide();
+                
+            }
+        } else
+        {
+            Scene.main.ShowMessageBox("Invalid file name");
+        }
+    }
+
     #endregion
 
     //methods for Editor state
@@ -266,16 +440,29 @@ public class GameEditor : MonoBehaviour, IWorldRenderer
 
     void Idle()
     {
-
+        currentEditorObject = null;
+        if (InputMapper.main.CellSelect && PlayerCamera.main.MouseOnScreenPart(levelViewScreenSize))
+        {
+            //TODO: add player click support & switch to edit player state
+            EditorObject o = CheckRaycast(CellEditorLayer | PlayerLayer);
+            if (currentCell)
+            {
+                EditorState.SwitchState(GameEditorState.EditingCell);
+            }
+            if(o is PlayerEditor)
+            {
+                EditorState.SwitchState(GameEditorState.EditingPlayer);
+            }
+        }
     }
 
     void ConfiguringCellGroups()
     {
-        currentCell = null;
+        currentEditorObject = null;
         //print(PlayerCamera.main.MouseOnScreenPart(levelViewScreenSize));
         if((InputMapper.main.CellSelect || InputMapper.main.CellDeselect) && PlayerCamera.main.MouseOnScreenPart(levelViewScreenSize))
         {
-            CheckRaycast();
+            CheckRaycast(CellEditorLayer);
             if(currentCell)
             {
                 if (InputMapper.main.CellSelect)
@@ -291,6 +478,62 @@ public class GameEditor : MonoBehaviour, IWorldRenderer
 
     void EditingCell()
     {
+        if ((InputMapper.main.CellSelect || InputMapper.main.CellDeselect) && PlayerCamera.main.MouseOnScreenPart(levelViewScreenSize))
+        {
+            EditorCell current = currentEditorObject as EditorCell;
+            CheckRaycast(CellEditorLayer);
+
+            if(currentEditorObject as EditorCell == current)
+            {
+                int delta = 0;
+                if (InputMapper.main.CellIncrease)
+                {
+                    delta++;
+                }
+                if (InputMapper.main.CellDecrease)
+                {
+                    delta--;
+                }
+                if (CellNumbersInputFields != null && CellNumbersInputFields.Length > 0 && delta != 0)
+                {
+                    int cn1 = int.Parse(CellNumbersInputFields[0].text);
+                    cn1 += delta;
+                    CellNumbersInputFields[0].text = cn1.ToString();
+                    ApplyCellChanges();
+                }
+                if (InputMapper.main.CellIncrease)
+                {
+                    
+                }
+                
+            }
+
+            ReDrawCellEditingObjects();
+            RedrawCellInspectorUI();
+        }
+    }
+
+    void EditingPlayer()
+    {
+
+        if (InputMapper.main.CellSelect && PlayerCamera.main.MouseOnScreenPart(levelViewScreenSize))
+        {
+
+            CheckRaycast(CellEditorLayer | PlayerLayer);
+
+            if(currentCell)
+            {
+                if(Scene.Player.CurrentPosition != null)
+                {
+                    World.main.Cells.getCoordsNonAlloc(currentCell.index, ref Scene.Player.CurrentPosition);
+                } else
+                {
+                    Scene.Player.CurrentPosition = World.main.Cells.getCoords(currentCell.index);
+                }
+                LevelData.PlayerStartPosition = Scene.Player.CurrentPosition;
+                Scene.Player.Reposition();
+            }
+        }
 
     }
 
@@ -313,12 +556,178 @@ public class GameEditor : MonoBehaviour, IWorldRenderer
         RemoveArrows();
     }
 
-    /*void ConfiguringCellGroups2Itself()
+    void Idle2EditingCell()
+    {
+        if(currentCell)
+        {
+            ReDrawCellEditingObjects();
+            RedrawCellInspectorUI();
+        }
+    }
+
+    void EditingCell2Idle()
+    {
+        currentEditorObject = null;
+        ReDrawCellEditingObjects();
+    }
+
+    void ConfiguringCellGroups2EditingCell()
     {
 
-    }*/
+    }
+
+    void EditingCell2ConfiguringCellGroups()
+    {
+        currentEditorObject = null;
+        ReDrawCellEditingObjects();
+    }
+
+    void EditingPlayerExit()
+    {
+        if(playerEditorObject)
+        {
+            playerEditorObject.DisableOutline();
+        }
+    }
+
+    void EditingPlayerEnter()
+    {
+        if (playerEditorObject)
+        {
+            playerEditorObject.EnableOutline();
+        }
+    }
 
     #endregion
+
+    void SaveLevelDataToFile(string filename, WorldData data)
+    {
+        try
+        {
+
+            //print(Directory.GetCurrentDirectory() + " " + GameData.DefaultSaveLevelDirectory + " " + filename);
+
+            filename = Path.Combine(Directory.GetCurrentDirectory(), GameData.DefaultSaveLevelDirectory, filename);
+
+            //print(filename);
+
+            StreamWriter sw = new StreamWriter(filename);
+
+            sw.Write(data.ToString());
+
+            sw.Close();
+            Scene.main.ShowMessageBox("Level saved");
+
+        }
+        catch (OutOfMemoryException)
+        {
+            Scene.main.ShowMessageBox("Out of memory", "Cannot save level");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            Scene.main.ShowMessageBox("Cannot write to file", "Cannot save level");
+        }
+        catch (DirectoryNotFoundException)
+        {
+            Scene.main.ShowMessageBox("Given directory does not exist", "Cannot save level");
+        }
+        catch (PathTooLongException)
+        {
+            Scene.main.ShowMessageBox("Given path to file is too long", "Cannot save level");
+        }
+        catch (SecurityException)
+        {
+            Scene.main.ShowMessageBox("Cannot write to file", "Cannot save level");
+        }
+        catch (Exception e)
+        {
+            Scene.main.ShowMessageBox("Error: " + e.Message);
+        }
+    }
+
+    public void ReDrawCellEditingObjects()
+    {
+        RemoveArrows();
+
+        if(currentCell)
+        {
+
+            Cell cell = World.main.Cells.OneDimensional[currentCell.index];
+
+            cell.Redraw();
+            cell.DrawAbove(ArrowSpawner.GetObject());
+
+            if((cell.Data.Type & CellData.CellType.TeleportIn) == CellData.CellType.TeleportIn)
+            {
+                int targetIndex = cell.Data.Number2;
+                if(targetIndex >= 0 && targetIndex < World.main.Cells.OneDimensional.Length)
+                {
+                    Cell targetCell = World.main.Cells.OneDimensional[targetIndex];
+                    targetCell.DrawAbove(BlueArrowSpawner.GetObject());
+                }
+            }
+        }
+
+        Scene.Player.Reposition();
+    }
+
+    public void RedrawCellInspectorUI()
+    {
+
+        if (currentCell)
+        {
+
+            CellPropertiesInspectorHodler.SetActive(true);
+
+            CellNameText.text = "Cell " + currentCell.index;
+
+            CellData data = LevelData.CellDatas.OneDimensional[currentCell.index];
+
+            for(int i = 0; i < CellTypeToggles.Length; i++)
+            {
+                CellTypeToggles[i].SetIsOnWithoutNotify(((int)data.Type & ((int)Mathf.Pow(2, i))) != 0);
+            }
+
+            for (int j = 0; j < CellPropertyObjects.Length; j++)
+            {
+                CellPropertyObjects[j].UIElement.SetActive(false);
+            }
+
+
+            for(int i = 0; i < CellPropertyObjects.Length; i++)
+            {
+                CellPropertyObjects[i].UIElement.SetActive(false);
+            }
+
+            for (int i = 0; i < CellTypeToggles.Length; i++)
+            {
+                if (CellTypeToggles[i].isOn)
+                {
+                    for (int j = 0; j < CellPropertyObjects.Length; j++)
+                    {
+                        if (CellPropertyObjects[j].ToggleIndex == i)
+                            CellPropertyObjects[j].UIElement.SetActive(true);
+                    }
+                }
+            }
+
+            int[] dint = { data.Number1, data.Number2, data.Number3, data.AffectedCellGroup };
+            int mm = Mathf.Min(dint.Length, CellNumbersInputFields.Length);
+
+            for(int i = 0; i < mm; i++)
+            {
+                CellNumbersInputFields[i].SetTextWithoutNotify(dint[i].ToString());
+            }
+
+            CellPropertiesHolder.Redraw();
+
+        } else
+        {
+
+            CellPropertiesInspectorHodler.SetActive(false);
+
+        }
+    }
 
     public void DrawArrows(int cellGroup)
     {
@@ -328,9 +737,15 @@ public class GameEditor : MonoBehaviour, IWorldRenderer
         }
     }
 
+    public void DrawBlueArrows(int cellTargetIndex)
+    {
+        World.main.Cells.OneDimensional[cellTargetIndex].DrawAbove(BlueArrowSpawner.GetObject());
+    }
+
     public void RemoveArrows()
     {
         ArrowSpawner.ReturnAll();
+        BlueArrowSpawner.ReturnAll();
     }
 
     public List<(Button button, int index)> CellGroupButtons;
@@ -504,12 +919,27 @@ public class GameEditor : MonoBehaviour, IWorldRenderer
 
         ArrowSpawner = new ObjectSpawner(arrowPointer, Host.transform, World.main.Cells.OneDimensional.Length, ObjectSpawner.SpawnerType.Expandable);
 
+        BlueArrowSpawner = new ObjectSpawner(blueArrowPointer, Host.transform, 1);
+
         CellGroupsLists = JaggedArrayToLists(LevelData.CellGroups);
 
         if (CellGroupsLists == null)
             CellGroupsLists = new List<List<int>>();
 
         InitCellGroupButtons();
+
+        CellPropertiesInspectorHodler.SetActive(false);
+
+        SaveLevelWindowObject.Hide();
+
+        Scene.Player.WorldRenderer = this;
+        Scene.Player.WorldIn = World.main.Cells;
+
+        Scene.Player.CurrentPosition = new int[LevelData.PlayerStartPosition.Length];
+        Array.Copy(LevelData.PlayerStartPosition, Scene.Player.CurrentPosition, LevelData.PlayerStartPosition.Length);
+        Scene.Player.Reposition();
+
+        EditorState.State = GameEditorState.Idle;
         
     }
 
@@ -523,12 +953,16 @@ public class GameEditor : MonoBehaviour, IWorldRenderer
         Destroy(Host);
         LevelData = null;
         ArrowSpawner = null;
+        BlueArrowSpawner = null;
         CellGroupsLists = null;
         CellGroupButtons = null;
+        currentEditorObject = null;
+        CellPropertiesInspectorHodler.SetActive(false);
     }
 
     private void Update()
     {
+        //print(EditorState.State + " " + currentCell);
         EditorState.Execute();
     }
 

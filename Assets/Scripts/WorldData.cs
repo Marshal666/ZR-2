@@ -24,6 +24,8 @@ public class WorldData
 
     public GameTypes GameType = GameTypes.SumToZero;
 
+    public int[] PlayerStartPosition;
+
     public int[][] CellGroups;
 
     public MArray<CellData> CellDatas;
@@ -53,6 +55,11 @@ public class WorldData
             string gameTypeString = r.ReadLine();
 
             GameType = (WorldData.GameTypes)Enum.Parse(typeof(WorldData.GameTypes), gameTypeString);
+
+            //load player position
+            string playerPosStr = r.ReadLine();
+            char[] delimsp = { '(', ')', ' ', ',', '\t', '\r' };
+            PlayerStartPosition = ParseStrings(playerPosStr.Split(delimsp, StringSplitOptions.RemoveEmptyEntries)).ToArray();
 
             //load cell groups
             string gameGroupCountString = r.ReadLine();
@@ -146,6 +153,7 @@ public class WorldData
         {
             StreamReader r = new StreamReader(file);
             rt = r.ReadLine();
+            r.Close();
         } catch (Exception)
         {
             return ErrorReadName;
@@ -163,17 +171,39 @@ public class WorldData
         sb.Append(nl);
         sb.Append(GameType.ToString());
         sb.Append(nl);
-        sb.Append(CellGroups.Length);
-        sb.Append(nl);
-        for(int i = 0; i < CellGroups.Length; i++)
+        sb.Append('(');
+        if (PlayerStartPosition != null)
         {
-            if(CellGroups[i] != null)
+            for(int i = 0; i < PlayerStartPosition.Length; i++)
             {
-                sb.Append('{');
-                sb.Append(string.Join(", ", CellGroups[i]));
-                sb.Append('}');
-                sb.Append(nl);
+                sb.Append(PlayerStartPosition[i]);
+                if (i + 1 < PlayerStartPosition.Length)
+                    sb.Append(", ");
             }
+        } else 
+        {
+            throw new NullReferenceException("PlayerStartPosition is null");
+        }
+        sb.Append(')');
+        sb.Append(nl);
+        if (CellGroups != null)
+        {
+            sb.Append(CellGroups.Length);
+            sb.Append(nl);
+            for (int i = 0; i < CellGroups.Length; i++)
+            {
+                if (CellGroups[i] != null)
+                {
+                    sb.Append('{');
+                    sb.Append(string.Join(", ", CellGroups[i]));
+                    sb.Append('}');
+                    sb.Append(nl);
+                }
+            }
+        } else
+        {
+            sb.Append('0');
+            sb.Append(nl);
         }
         sb.Append(string.Join(" ", CellDatas.Dimensions));
         sb.Append(nl);

@@ -28,7 +28,7 @@ public class InputMapper : MonoBehaviour
 
     public KeyCode CellSelectKey = KeyCode.Mouse0;
 
-    public KeyCode CellIncreaseKey = KeyCode.Mouse0, CellACtionKey = KeyCode.LeftShift, CellDecreaseKey = KeyCode.Mouse1;
+    public KeyCode CellIncreaseKey = KeyCode.Mouse0, CellActionKey = KeyCode.LeftShift, CellDecreaseKey = KeyCode.Mouse1;
 
     public bool InvertMouseScroll = true;
 
@@ -53,6 +53,8 @@ public class InputMapper : MonoBehaviour
     public Vector3 EditorHoverValueOld;
 
     public bool CellSelect, CellDeselect;
+
+    public bool CellIncrease, CellDecrease;
 
     private void Awake()
     {
@@ -101,6 +103,9 @@ public class InputMapper : MonoBehaviour
         CellSelect = Input.GetKeyDown(CellSelectKey);
 
         CellDeselect = Input.GetKeyDown(CellDecreaseKey);
+
+        CellIncrease = Input.GetKeyDown(CellIncreaseKey) & Input.GetKey(CellActionKey);
+        CellDecrease = Input.GetKeyDown(CellDecreaseKey) & Input.GetKey(CellActionKey);
 
         if(EditorHover)
         {

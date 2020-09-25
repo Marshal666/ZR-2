@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
@@ -215,6 +216,11 @@ public class Scene : MonoBehaviour
 
     }
 
+    void Start()
+    {
+        GameEditor.main.enabled = false;
+    }
+
     /// <summary>
     /// Clears all child objects of given object
     /// </summary>
@@ -308,6 +314,23 @@ public class Scene : MonoBehaviour
         MessageBox.SetActive(true);
         MessageBoxMessage.text = message;
         MessageBoxTitle.text = title;
+    }
+
+    public void ShowYesNoMessageBox(string message, Action yesAction, Action noAction = null, string title = "Game message")
+    {
+        //null noAction is HideYesNoMessageBox
+        if(noAction == null)
+        {
+            noAction = HideYesNoMessageBox;
+        }
+
+
+
+    }
+
+    public void HideYesNoMessageBox()
+    {
+
     }
 
     void SwitchUIToState(MenuStates state)
@@ -522,8 +545,13 @@ public class Scene : MonoBehaviour
     void Menu2Playing()
     {
         DisableUI();
+
+        playerC.WorldIn = World.main.Cells;
+        playerC.WorldRenderer = World.main;
         playerC.PlayerState.SwitchState(Player.PlayerStates.Playing);
+
         playerCameraC.CameraState.SwitchState(PlayerCamera.PlayerCameraStates.FollowPlayer);
+        
     }
 
     void Paused2Menu()
@@ -590,6 +618,7 @@ public class Scene : MonoBehaviour
 
     void Menu2Editor()
     {
+        GameEditor.main.enabled = true;
         DisableUI();
         EditorObjects.SetActive(true);
         GameEditor.main.Init();
@@ -604,6 +633,7 @@ public class Scene : MonoBehaviour
         World.main.ResetToDefault();
         playerCameraC.ResetToDefault();
         GameEditor.main.Clear();
+        GameEditor.main.enabled = false;
 
         MenuState.SwitchState(MenuStates.Start);
 

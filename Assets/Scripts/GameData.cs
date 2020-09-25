@@ -80,6 +80,15 @@ public class GameData : MonoBehaviour
     public GameObject arrowObject;
     public static GameObject ArrowObject { get { return main.arrowObject; } }
 
+    public string defaultSaveLevelDirectory = @"\Levels\";
+
+    public static string DefaultSaveLevelDirectory { get { return main.defaultSaveLevelDirectory; } }
+
+    public string defaultSaveFileExtension = ".txt";
+
+    public static string DefaultSaveFileExtension { get { return main.defaultSaveFileExtension; } }
+
+
     /// <summary>
     /// Script init
     /// </summary>
