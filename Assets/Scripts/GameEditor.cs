@@ -210,6 +210,7 @@ public class GameEditor : MonoBehaviour, IWorldRenderer
         EditorState.StateEnterMethods[GameEditorState.EditingPlayer] = EditingPlayerEnter;
 
         EditorState.StateExitMethods[GameEditorState.EditingPlayer] = EditingPlayerExit;
+        EditorState.StateExitMethods[GameEditorState.EditingCell] = EditingCellExit;
 
         EditorState.Switches[GameEditorState.Idle][GameEditorState.ConfiguringCellGroups] = Idle2ConfiguringCellGroups;
         EditorState.Switches[GameEditorState.ConfiguringCellGroups][GameEditorState.Idle] = ConfiguringCellGroups2Idle;
@@ -596,6 +597,18 @@ public class GameEditor : MonoBehaviour, IWorldRenderer
         {
             playerEditorObject.EnableOutline();
         }
+    }
+
+    void EditingCellEnter()
+    {
+
+    }
+
+    void EditingCellExit()
+    {
+        currentEditorObject = null;
+        ReDrawCellEditingObjects();
+        RedrawCellInspectorUI();
     }
 
     #endregion
