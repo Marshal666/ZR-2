@@ -261,7 +261,7 @@ public class Player : MonoBehaviour
             //print("Move: " + string.Join(", ", currentPosition) + " " + Cells[currentPosition].name + " i: " + Cells.getIndex(currentPosition));
 
             //empty cells cannot be visited
-            if (WorldIn[CurrentPosition].Data.Number1 != 0)
+            if (WorldIn[CurrentPosition].Data.Number1 > 0)
             {
 
                 //visit cell

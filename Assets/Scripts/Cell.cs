@@ -24,7 +24,7 @@ public class Cell : MonoBehaviour
     /// <summary>
     /// Reference to an instantiated negative object for this cell, used when Number1 < 0
     /// </summary>
-    public GameObject Negative;
+    //public GameObject Negative;
 
     /// <summary>
     /// Reference to an instantiated ruin object for this cell, used when Number1 == 0
@@ -85,13 +85,6 @@ public class Cell : MonoBehaviour
         PreviewChanges += BasePreview;
         RemovePreviewChanges += BaseRemovePreview;
 
-        if (!Negative)
-        {
-            Negative = Instantiate(GameData.BuildingBlocks[Data.BuildingType].Negative);
-            Negative.transform.position = transform.position;
-            Negative.transform.SetParent(transform);
-            Negative.SetActive(false);
-        }
         if (!Zero)
         {
             Zero = Instantiate(GameData.BuildingBlocks[Data.BuildingType].Zero);
@@ -114,11 +107,7 @@ public class Cell : MonoBehaviour
     /// </summary>
     public void Draw()
     {
-        if (Data.Number1 < 0)
-        {
-            Negative.SetActive(true);
-        }
-        else if (Data.Number1 > 0)
+        if (Data.Number1 > 0)
         {
             Positives.SetActive(true);
             for (int i = 0; i < Data.Number1; i++)
@@ -138,7 +127,6 @@ public class Cell : MonoBehaviour
     /// </summary>
     public void Redraw()
     {
-        Negative.SetActive(false);
         Zero.SetActive(false);
         Positives.SetActive(false);
         if (Data.Number1 > 0)
@@ -159,9 +147,6 @@ public class Cell : MonoBehaviour
                 }
                 o.SetActive(i < Data.Number1);
             }
-        } else if(Data.Number1 < 0)
-        {
-            Negative.SetActive(true);
         } else
         {
             Zero.SetActive(true);
@@ -173,7 +158,6 @@ public class Cell : MonoBehaviour
     {
         Positives.SetActive(false);
         Zero.SetActive(false);
-        Negative.SetActive(false);
         if (newNumber1 > 0)
         {
             Positives.SetActive(true);
@@ -224,9 +208,6 @@ public class Cell : MonoBehaviour
 
 
             }
-        } else if(newNumber1 < 0)
-        {
-            Negative.SetActive(true);
         } else
         {
             Zero.SetActive(true);
@@ -236,7 +217,6 @@ public class Cell : MonoBehaviour
     public void UnDrawPreview()
     {
 
-        Negative.SetActive(false);
         Zero.SetActive(false);
         Positives.SetActive(false);
         if (Data.Number1 > 0)
@@ -262,10 +242,6 @@ public class Cell : MonoBehaviour
                 SetNormalTransparency(o);
 
             }
-        }
-        else if (Data.Number1 < 0)
-        {
-            Negative.SetActive(true);
         }
         else
         {
@@ -355,7 +331,7 @@ public class Cell : MonoBehaviour
     /// </summary>
     /// <param name="player">Player visiting the cell</param>
     /// <param name="moveInfo">Events moveInfo</param>
-    public delegate void VisitDelegate(Player player, ref Player.PlayerMoveInfo moveInfo);
+    public delegate void VisitDelegate(Player player, ref Player.PlayerMoveInfo moveInfo, World w = null);
 
     /// <summary>
     /// For preview methods
@@ -372,7 +348,7 @@ public class Cell : MonoBehaviour
     /// </summary>
     /// <param name="player">Player visiting the cell</param>
     /// <param name="moveInfo">Events moveInfo</param>
-    public delegate void UnVisitDelegate(Player player, ref Player.PlayerMoveInfo moveInfo);
+    public delegate void UnVisitDelegate(Player player, ref Player.PlayerMoveInfo moveInfo, World w = null);
 
     /// <summary>
     /// UnVisit methods
@@ -396,11 +372,12 @@ public class Cell : MonoBehaviour
     /// </summary>
     /// <param name="player">Player visiting the cell</param>
     /// <param name="moveInfo">Events moveInfo</param>
-    void BaseVisit(Player player, ref Player.PlayerMoveInfo moveInfo)
+    void BaseVisit(Player player, ref Player.PlayerMoveInfo moveInfo, World w = null)
     {
+        if (w == null)
+            w = World.main;
 
-        moveInfo.ExCells.Add(World.main.Cells.getIndex(player.CurrentPosition));
-
+        moveInfo.ExCells.Add(w.Cells.getIndex(player.CurrentPosition));
     }
 
     /// <summary>
@@ -408,7 +385,7 @@ public class Cell : MonoBehaviour
     /// </summary>
     /// <param name="player">Player visiting the cell</param>
     /// <param name="moveInfo">Events moveInfo</param>
-    void BaseUnVisit(Player player, ref Player.PlayerMoveInfo moveInfo)
+    void BaseUnVisit(Player player, ref Player.PlayerMoveInfo moveInfo, World w = null)
     {
         //nothing here actually
     }
@@ -418,14 +395,17 @@ public class Cell : MonoBehaviour
     /// </summary>
     /// <param name="player">Player visiting the cell</param>
     /// <param name="moveInfo">Events moveInfo</param>
-    void DefaultVisit(Player player, ref Player.PlayerMoveInfo moveInfo)
+    void DefaultVisit(Player player, ref Player.PlayerMoveInfo moveInfo, World w = null)
     {
+
+        if (w == null)
+            w = World.main;
 
         Data.Number1--;
         Redraw();
 
         if (Data.Number1 >= 0)
-            World.main.Sum--;
+            w.Sum--;
 
         //print("dv");
 
@@ -436,14 +416,17 @@ public class Cell : MonoBehaviour
     /// </summary>
     /// <param name="player">Player visiting the cell</param>
     /// <param name="moveInfo">Events moveInfo</param>
-    void DefaultUnVisit(Player player, ref Player.PlayerMoveInfo moveInfo)
+    void DefaultUnVisit(Player player, ref Player.PlayerMoveInfo moveInfo, World w = null)
     {
+
+        if (w == null)
+            w = World.main;
 
         Data.Number1++;
         Redraw();
 
         if (Data.Number1 > 0)
-            World.main.Sum++;
+            w.Sum++;
 
         //print("duv");
 
@@ -454,8 +437,11 @@ public class Cell : MonoBehaviour
     /// </summary>
     /// <param name="player">Player visiting the cell</param>
     /// <param name="moveInfo">Events moveInfo</param>
-    void TeleportInVisit(Player player, ref Player.PlayerMoveInfo moveInfo)
+    void TeleportInVisit(Player player, ref Player.PlayerMoveInfo moveInfo, World w = null)
     {
+
+        if (w == null)
+            w = World.main;
 
         #region RECURSIVE_WAY
         //recursive solution - I don't like it
@@ -480,12 +466,12 @@ public class Cell : MonoBehaviour
 
             int pos = Data.Number2;
 
-            Cell cell = World.main.Cells.OneDimensional[pos];
+            Cell cell = w.Cells.OneDimensional[pos];
 
-            World.main.Cells.getCoordsNonAlloc(pos, ref player.CurrentPosition);
+            w.Cells.getCoordsNonAlloc(pos, ref player.CurrentPosition);
 
             //visit pointed cell but not the teleport method(if any)
-            (cell.Visit - cell.TeleportInVisit).Invoke(player, ref moveInfo);
+            (cell.Visit - cell.TeleportInVisit).Invoke(player, ref moveInfo, w);
 
             //visit teleport chain, condition for teleporting is that Number1 must be >= 0 to avoid infinite loops
             while ((cell.Data.Type & CellData.CellType.TeleportIn) == CellData.CellType.TeleportIn && cell.Data.Number1 >= 0)
@@ -494,16 +480,16 @@ public class Cell : MonoBehaviour
                 //visit cell pointed by other teleport
                 pos = cell.Data.Number2;
 
-                cell = World.main.Cells.OneDimensional[pos];
+                cell = w.Cells.OneDimensional[pos];
 
-                World.main.Cells.getCoordsNonAlloc(pos, ref player.CurrentPosition);
+                w.Cells.getCoordsNonAlloc(pos, ref player.CurrentPosition);
 
-                (cell.Visit - cell.TeleportInVisit).Invoke(player, ref moveInfo);
+                (cell.Visit - cell.TeleportInVisit).Invoke(player, ref moveInfo, w);
 
             }
 
             //position player to last visited cll
-            World.main.Cells.getCoordsNonAlloc(pos, ref player.CurrentPosition);
+            w.Cells.getCoordsNonAlloc(pos, ref player.CurrentPosition);
 
         }
 
@@ -514,7 +500,7 @@ public class Cell : MonoBehaviour
     /// </summary>
     /// <param name="player">Player visiting the cell</param>
     /// <param name="moveInfo">Events moveInfo</param>
-    void TeleportInUnVisit(Player player, ref Player.PlayerMoveInfo moveInfo)
+    void TeleportInUnVisit(Player player, ref Player.PlayerMoveInfo moveInfo, World w = null)
     {
         //anything required here? -seems not since ExCells in info has all required data
     }
@@ -524,13 +510,17 @@ public class Cell : MonoBehaviour
     /// </summary>
     /// <param name="player">Player visiting the cell</param>
     /// <param name="moveInfo">Events moveInfo</param>
-    void ReachCellVisit(Player player, ref Player.PlayerMoveInfo moveInfo)
+    void ReachCellVisit(Player player, ref Player.PlayerMoveInfo moveInfo, World w = null)
     {
+
+        if (w == null)
+            w = World.main;
+
         Data.Number1--;
         Redraw();
 
         if (Data.Number1 >= 0)
-            World.main.ReachCellSum--;
+           w.ReachCellSum--;
     }
 
     /// <summary>
@@ -538,13 +528,17 @@ public class Cell : MonoBehaviour
     /// </summary>
     /// <param name="player">Player visiting the cell</param>
     /// <param name="moveInfo">Events moveInfo</param>
-    void ReachCellUnVisit(Player player, ref Player.PlayerMoveInfo moveInfo)
+    void ReachCellUnVisit(Player player, ref Player.PlayerMoveInfo moveInfo, World w = null)
     {
+
+        if (w == null)
+            w = World.main;
+
         Data.Number1++;
         Redraw();
 
         if (Data.Number1 >= 0)
-            World.main.ReachCellSum++;
+            w.ReachCellSum++;
     }
 
     /// <summary>
@@ -552,9 +546,9 @@ public class Cell : MonoBehaviour
     /// </summary>
     /// <param name="player">Player visiting the cell</param>
     /// <param name="moveInfo">Events moveInfo</param>
-    void IncreaserVisit(Player player, ref Player.PlayerMoveInfo moveInfo)
+    void IncreaserVisit(Player player, ref Player.PlayerMoveInfo moveInfo, World w = null)
     {
-        IncraserIncrease();
+        IncraserIncrease(w);
     }
 
     /// <summary>
@@ -562,9 +556,9 @@ public class Cell : MonoBehaviour
     /// </summary>
     /// <param name="player">Player visiting the cell</param>
     /// <param name="moveInfo">Events moveInfo</param>
-    void IncreaserUnVisit(Player player, ref Player.PlayerMoveInfo moveInfo)
+    void IncreaserUnVisit(Player player, ref Player.PlayerMoveInfo moveInfo, World w = null)
     {
-        IncreaserReverseIncrease();
+        IncreaserReverseIncrease(w);
     }
 
     #endregion
@@ -572,17 +566,21 @@ public class Cell : MonoBehaviour
     /// <summary>
     /// Makes increaser do its job and keeping world sums valid
     /// </summary>
-    public void IncraserIncrease()
+    public void IncraserIncrease(World w)
     {
-        if(World.main.CellGroups != null)
+
+        if (w == null)
+            w = World.main;
+
+        if (w.CellGroups != null)
         {
 
             //increaser can only increase existing cell groups
-            if (Data.AffectedCellGroup < 0 || Data.AffectedCellGroup >= World.main.CellGroups.Length)
+            if (Data.AffectedCellGroup < 0 || Data.AffectedCellGroup >= w.CellGroups.Length)
                 return;
 
             //get belonging cell group
-            int[] AffectedCellGroup = World.main.CellGroups[Data.AffectedCellGroup];
+            int[] AffectedCellGroup = w.CellGroups[Data.AffectedCellGroup];
 
             //for tracking how sum of group changes
             (int , int) sumsOld = (0, 0), sumsNew = (0, 0);
@@ -591,7 +589,7 @@ public class Cell : MonoBehaviour
             for(int i = 0; i < AffectedCellGroup.Length; i++)
             {
 
-                Cell cell = World.main.Cells.OneDimensional[AffectedCellGroup[i]];
+                Cell cell = w.Cells.OneDimensional[AffectedCellGroup[i]];
 
                 if ((cell.Data.Type & CellData.CellType.Default) == CellData.CellType.Default)
                 {
@@ -621,9 +619,9 @@ public class Cell : MonoBehaviour
 
             //apply sum differences to world
 
-            World.main.Sum += (sumsNew.Item1 - sumsOld.Item1);
+            w.Sum += (sumsNew.Item1 - sumsOld.Item1);
 
-            World.main.ReachCellSum += (sumsNew.Item2 - sumsOld.Item2);
+            w.ReachCellSum += (sumsNew.Item2 - sumsOld.Item2);
 
         }
     }
@@ -631,17 +629,21 @@ public class Cell : MonoBehaviour
     /// <summary>
     /// Reverts increasers job while keeping world sums valid
     /// </summary>
-    public void IncreaserReverseIncrease()
+    public void IncreaserReverseIncrease(World w)
     {
-        if (World.main.CellGroups != null)
+
+        if (w == null)
+            w = World.main;
+
+        if (w.CellGroups != null)
         {
 
             //increaser can only increase existing cell groups
-            if (Data.AffectedCellGroup < 0 || Data.AffectedCellGroup >= World.main.CellGroups.Length)
+            if (Data.AffectedCellGroup < 0 || Data.AffectedCellGroup >= w.CellGroups.Length)
                 return;
 
             //get belonging cell group
-            int[] AffectedCellGroup = World.main.CellGroups[Data.AffectedCellGroup];
+            int[] AffectedCellGroup = w.CellGroups[Data.AffectedCellGroup];
 
             //for tracking how sum of group changes
             (int, int) sumsOld = (0, 0), sumsNew = (0, 0);
@@ -650,7 +652,7 @@ public class Cell : MonoBehaviour
             for (int i = 0; i < AffectedCellGroup.Length; i++)
             {
 
-                Cell cell = World.main.Cells.OneDimensional[AffectedCellGroup[i]];
+                Cell cell = w.Cells.OneDimensional[AffectedCellGroup[i]];
 
                 if ((cell.Data.Type & CellData.CellType.Default) == CellData.CellType.Default)
                 {
@@ -680,9 +682,9 @@ public class Cell : MonoBehaviour
 
             //revert sum changes
 
-            World.main.Sum += (sumsNew.Item1 - sumsOld.Item1);
+            w.Sum += (sumsNew.Item1 - sumsOld.Item1);
 
-            World.main.ReachCellSum += (sumsNew.Item2 - sumsOld.Item2);
+            w.ReachCellSum += (sumsNew.Item2 - sumsOld.Item2);
 
         }
     }

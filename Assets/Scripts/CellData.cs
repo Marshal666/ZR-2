@@ -64,9 +64,15 @@ public struct CellData
     /// <param name="affected"></param>
     public CellData(CellType type, int num1, int num2, int num3, int bdt, int affected)
     {
+        if ((int)type == 0)
+            type = CellType.Default;
         Type = type;
+        if (num1 < 0)
+            num1 = 0;
         Number1 = num1;
         Number2 = num2;
+        if (num3 > 0)
+            num3 = 0;
         Number3 = num3;
         BuildingType = bdt;
         AffectedCellGroup = affected;
@@ -122,7 +128,6 @@ public struct CellData
     /// <returns>CellData based on string</returns>
     public static CellData Parse(string s)
     {
-        CellData cd = new CellData();
 
         char[] delims = { '(', ',', ' ', '\t', '\r', '\n', ')', '{', '}', ';' };
 
@@ -130,13 +135,14 @@ public struct CellData
         if (data.Length < 6)
             throw new System.Exception("Not enough data for parsing given");
 
-        cd.Type = (CellType)System.Convert.ToInt32(data[0], 2);
-        cd.Number1 = int.Parse(data[1]);
-        cd.Number2 = int.Parse(data[2]);
-        cd.Number3 = int.Parse(data[3]);
-        cd.BuildingType = int.Parse(data[4]);
-        cd.AffectedCellGroup = int.Parse(data[5]);
+        /*cd.Type =;
+        cd.Number1 = ;
+        cd.Number2 = ;
+        cd.Number3 = ;
+        cd.BuildingType = );
+        cd.AffectedCellGroup = ;*/
 
+        CellData cd = new CellData((CellType)Convert.ToInt32(data[0], 2), int.Parse(data[1]), int.Parse(data[2]), int.Parse(data[3]), int.Parse(data[4]), int.Parse(data[5]));
         return cd;
     }
 
