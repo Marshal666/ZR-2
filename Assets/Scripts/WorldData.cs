@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System;
+using System.Linq;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Text;
@@ -209,6 +210,22 @@ public class WorldData
         sb.Append(nl);
         sb.Append(string.Join(" ", CellDatas.OneDimensional));
         return sb.ToString();
+    }
+
+    public WorldData Duplicate()
+    {
+        WorldData wd = new WorldData();
+
+        wd.LevelName = LevelName;
+        wd.GameType = GameType;
+        wd.PlayerStartPosition = PlayerStartPosition.ToArray();
+        if (CellGroups != null)
+            wd.CellGroups = CellGroups.ToArray();
+        wd.CellDatas = new MArray<CellData>(CellDatas.Dimensions);
+        for (int i = 0; i < wd.CellDatas.OneDimensional.Length; i++)
+            wd.CellDatas.OneDimensional[i] = CellDatas.OneDimensional[i];
+
+        return wd;
     }
 
 }

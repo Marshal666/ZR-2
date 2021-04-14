@@ -227,6 +227,8 @@ public class Scene : MonoBehaviour
     /// <param name="t">Object whose children will be deleted</param>
     public static void ClearChildren(Transform t)
     {
+        if (!t)
+            return;
         for (int i = t.childCount - 1; i >= 0; i--)
         {
             Destroy(t.GetChild(i).gameObject);

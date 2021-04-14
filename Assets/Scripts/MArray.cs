@@ -4,6 +4,7 @@ using UnityEngine;
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
+using System.Text;
 
 [System.Serializable]
 public class MArray<T> : IEnumerable, ISerializable
@@ -184,6 +185,26 @@ public class MArray<T> : IEnumerable, ISerializable
         info.AddValue("dimensions", dimensions);
         info.AddValue("length", length);
         info.AddValue("arr", arr);
+    }
+
+    public override string ToString()
+    {
+        StringBuilder sb = new StringBuilder(1024);
+
+        sb.Append("{");
+
+        for(int i = 0; i < OneDimensional.Length - 1; i++)
+        {
+            sb.Append(OneDimensional[i].ToString());
+            sb.Append(", ");
+        }
+
+        if (OneDimensional.Length > 0)
+            sb.Append(OneDimensional[OneDimensional.Length - 1]);
+
+        sb.Append("}");
+
+        return sb.ToString();
     }
 
 }

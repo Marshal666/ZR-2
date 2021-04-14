@@ -247,6 +247,19 @@ public class GameEditor : MonoBehaviour, IWorldRenderer
         return true;
     }
 
+    public bool LoadLevel(WorldData data)
+    {
+        if (data == null)
+            return false;
+
+        LevelData = data;
+
+        Scene.main.GameState.SwitchState(Scene.GameStates.Editor);
+
+        return true;
+
+    }
+
     /// <summary>
     /// For button onClick events
     /// </summary>
@@ -313,6 +326,8 @@ public class GameEditor : MonoBehaviour, IWorldRenderer
         Scene.main.GameState.SwitchState(Scene.GameStates.Editor);
 
     }
+
+
 
     //onClick like events
     #region UI_EVENTS
@@ -907,6 +922,16 @@ public class GameEditor : MonoBehaviour, IWorldRenderer
         }
     }
 
+    public void RedrawCells(WorldData data)
+    {
+        LevelData = data;
+        Scene.ClearChildren(Host.transform);
+        World.main.AssembleLevel(LevelData, Host);
+        ArrowSpawner = new ObjectSpawner(arrowPointer, Host.transform, World.main.Cells.OneDimensional.Length, ObjectSpawner.SpawnerType.Expandable);
+        BlueArrowSpawner = new ObjectSpawner(blueArrowPointer, Host.transform, 1);
+
+    }
+
     /// <summary>
     /// Inits editor for work
     /// </summary>
@@ -971,6 +996,8 @@ public class GameEditor : MonoBehaviour, IWorldRenderer
         CellGroupButtons = null;
         currentEditorObject = null;
         CellPropertiesInspectorHodler.SetActive(false);
+        testerE = null;
+        StopAllCoroutines();
     }
 
     private void Update()
@@ -1019,6 +1046,33 @@ public class GameEditor : MonoBehaviour, IWorldRenderer
         {
             DrawArrows(buttonSelectIndex);
         }
+    }
+
+    IEnumerator testerE = null;
+
+    public void TestLevel()
+    {
+        if (testerE == null)
+        {
+            WorldTester tester = new WorldTester(LevelData);
+            testerE = tester.BuildTreeSteps();
+        } 
+        if(!testerE.MoveNext())
+        {
+            testerE = null;
+        }
+        
+    }
+
+    public void TestLevelFast()
+    {
+        if(testerE != null)
+        {
+            print("Cannot do both tests at the same time");
+            return;
+        }
+        WorldTester tester = new WorldTester(LevelData);
+        tester.BuildTree();
     }
 
     public void RenderPositionChanges()
