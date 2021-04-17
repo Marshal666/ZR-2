@@ -8,6 +8,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Text;
+using System.Threading;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -998,6 +999,8 @@ public class GameEditor : MonoBehaviour, IWorldRenderer
         CellPropertiesInspectorHodler.SetActive(false);
         testerE = null;
         StopAllCoroutines();
+        if (testThread != null && testThread.IsAlive)
+            testThread.Abort();
     }
 
     private void Update()
@@ -1064,6 +1067,8 @@ public class GameEditor : MonoBehaviour, IWorldRenderer
         
     }
 
+    Thread testThread = null;
+
     public void TestLevelFast()
     {
         if(testerE != null)
@@ -1071,8 +1076,22 @@ public class GameEditor : MonoBehaviour, IWorldRenderer
             print("Cannot do both tests at the same time");
             return;
         }
-        WorldTester tester = new WorldTester(LevelData);
-        tester.BuildTree();
+
+
+        if (testThread != null && !testThread.IsAlive)
+            testThread = null;
+        if (testThread == null)
+        {
+            testThread = new Thread(new ThreadStart(StartThread));
+            testThread.Start();
+
+            void StartThread()
+            {
+                print("Thread started");
+                WorldTester tester = new WorldTester(LevelData);
+                tester.BuildTree();
+            }
+        }
     }
 
     public void RenderPositionChanges()

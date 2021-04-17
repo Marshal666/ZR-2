@@ -335,7 +335,7 @@ public class WorldTester
 
         if (done)
         {
-            Debug.Log("Algorithm done!");
+            Debug.Log("Zero sum found!");
             List<int> path = new List<int>();
             while (doneNode != null)
             {
@@ -357,7 +357,7 @@ public class WorldTester
         }
         else
         {
-            Debug.Log("No solution found!");
+            Debug.Log("No zero sum found!");
         }
 
         bool CanVisit(int dim, int move)
@@ -401,6 +401,8 @@ public class WorldTester
 
         TreeNode previous = null;
 
+        (int sum, List<int> path) bestPath = (int.MaxValue, null);
+
         while(open.Count > 0)
         {
             TreeNode current = open.Pop();
@@ -419,6 +421,12 @@ public class WorldTester
             //can't visit the root node state
             if (current.Parent != null)
                 current.Cell.Visit();
+
+            if(Sum < bestPath.sum)
+            {
+                bestPath.sum = Sum;
+                bestPath.path = RetrackPath(current);
+            }
 
             if(Sum == 0)
             {
@@ -461,13 +469,8 @@ public class WorldTester
 
         if(done)
         {
-            Debug.Log("Algorithm done!");
-            List<int> path = new List<int>();
-            while(doneNode != null)
-            {
-                path.Add(doneNode.Position);
-                doneNode = doneNode.Parent;
-            }
+            Debug.Log("Zero sum found! Score: " + (bestPath.path.Count - 1));
+            List<int> path = bestPath.path;
             path.Reverse();
             StringBuilder pathS = new StringBuilder(1024);
             for(int i = 0; i < path.Count - 1; i++)
@@ -482,13 +485,37 @@ public class WorldTester
             Debug.Log("Path: " + pathS.ToString());
         } else
         {
-            Debug.Log("No solution found!");
+            Debug.Log("No zero sum found! Best sum is: " + bestPath.sum + " Score: " + (bestPath.path.Count - 1));
+            List<int> path = bestPath.path;
+            path.Reverse();
+            StringBuilder pathS = new StringBuilder(1024);
+            for (int i = 0; i < path.Count - 1; i++)
+            {
+                pathS.Append("{");
+                pathS.Append(string.Join(", ", Cells.getCoords(path[i])));
+                pathS.Append("}, "); ;
+            }
+            pathS.Append("{");
+            pathS.Append(string.Join(", ", Cells.getCoords(path[path.Count - 1])));
+            pathS.Append("}");
+            Debug.Log("Path: " + pathS.ToString());
         }
 
         bool CanVisit(int dim, int move)
         {
             return move >= 0 && move < Cells.Dimensions[dim];
         }
+    }
+
+    List<int> RetrackPath(TreeNode node)
+    {
+        List<int> ret = new List<int>();
+        while(node != null)
+        {
+            ret.Add(node.Position);
+            node = node.Parent;
+        }
+        return ret;
     }
 
 }
