@@ -368,7 +368,7 @@ public class GameEditor : MonoBehaviour, IWorldRenderer
             {
                 data.Number1 = int.Parse(CellNumbersInputFields[0].text);
                 data.Number2 = int.Parse(CellNumbersInputFields[1].text);
-                data.Number3 = int.Parse(CellNumbersInputFields[2].text);
+                data.Number3 = -Mathf.Abs(int.Parse(CellNumbersInputFields[2].text));
                 data.AffectedCellGroup = int.Parse(CellNumbersInputFields[3].text);
             }
 

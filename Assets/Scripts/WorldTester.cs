@@ -85,9 +85,9 @@ public class CellTest
 
     public WorldTester World;
 
-    public delegate void VisitDelegate();
+    public delegate void VisitDelegate(ref int playerPos, ref TreeNode node);
 
-    public delegate void UnVisitDelegate();
+    public delegate void UnVisitDelegate(ref int playerPos, ref TreeNode node);
 
     public VisitDelegate VisitMethods;
 
@@ -98,25 +98,37 @@ public class CellTest
         Data = data;
         World = tester;
 
-        if(data.Type == CellData.CellType.Default)
+        if((data.Type & CellData.CellType.Default) == CellData.CellType.Default)
         {
             VisitMethods += DefaultVisit;
             UnVisitMethods += DefaultUnVisit;
         }
-        //TODO: add for teleporters and other things
+
+        if ((data.Type & CellData.CellType.TeleportIn) == CellData.CellType.TeleportIn)
+        {
+            VisitMethods += TeleportVisit;
+            UnVisitMethods += TeleportUnVisit;
+        }
+
+        if((data.Type & CellData.CellType.Increaser) == CellData.CellType.Increaser)
+        {
+            VisitMethods += DecreaserVisit;
+            UnVisitMethods += DecreaserUnVisit;
+        }
+        
     }
 
-    public void Visit()
+    public void Visit(ref int playerPos, ref TreeNode node)
     {
-        VisitMethods.Invoke();
+        VisitMethods.Invoke(ref playerPos, ref node);
     }
 
-    public void UnVisit()
+    public void UnVisit(ref int playerPos, ref TreeNode node)
     {
-        UnVisitMethods.Invoke();
+        UnVisitMethods.Invoke(ref playerPos, ref node);
     }
 
-    public void DefaultVisit()
+    public void DefaultVisit(ref int playerPos, ref TreeNode node)
     {
         Data.Number1--;
 
@@ -124,7 +136,7 @@ public class CellTest
             World.Sum--;
     }
 
-    public void DefaultUnVisit()
+    public void DefaultUnVisit(ref int playerPos, ref TreeNode node)
     {
         Data.Number1++;
 
@@ -132,8 +144,7 @@ public class CellTest
             World.Sum++;
     }
 
-    //TODO: Finish methods, generate tree nodes
-    public void TeleportVisit()
+    public void TeleportVisit(ref int playerPos, ref TreeNode node)
     {
         if(Data.Number1 >= 0)
         {
@@ -142,7 +153,12 @@ public class CellTest
             CellTest cell = World.Cells.OneDimensional[pos];
 
             //visit pointed cell but not the teleport method(if any)
-            (cell.VisitMethods - cell.TeleportVisit).Invoke();
+            (cell.VisitMethods - cell.TeleportVisit).Invoke(ref playerPos, ref node);
+
+            node.Left = new TreeNode(cell, node, pos);
+            node = node.Left;
+
+            playerPos = pos;
 
             while ((cell.Data.Type & CellData.CellType.TeleportIn) == CellData.CellType.TeleportIn && cell.Data.Number1 >= 0)
             {
@@ -152,18 +168,167 @@ public class CellTest
 
                 cell = World.Cells.OneDimensional[pos];
 
-                (cell.VisitMethods - cell.TeleportVisit).Invoke();
+                (cell.VisitMethods - cell.TeleportVisit).Invoke(ref playerPos, ref node);
+
+                node.Left = new TreeNode(cell, node, pos);
+
+                node = node.Left;
+
+                playerPos = pos;
 
             }
 
+            playerPos = pos;
+
         }
-
-
 
     }
 
-    public void TeleportUnVisit()
+    public void TeleportUnVisit(ref int playerPos, ref TreeNode node)
     {
+        //all nodes are in a tree
+       /*if(Data.Number1 >= -1)
+        {
+
+            int pos = Data.Number2;
+
+            CellTest cell = World.Cells.OneDimensional[pos];
+
+            //visit pointed cell but not the teleport method(if any)
+            (cell.VisitMethods - cell.TeleportVisit).Invoke(ref playerPos, ref node);
+
+            //playerPos = pos;
+
+            Stack<int> visiteds = new Stack<int>();
+
+            while ((cell.Data.Type & CellData.CellType.TeleportIn) == CellData.CellType.TeleportIn && cell.Data.Number1 >= 0)
+            {
+
+                //visit cell pointed by other teleport
+                pos = cell.Data.Number2;
+
+                visiteds.Push(pos);
+
+                cell = World.Cells.OneDimensional[pos];
+
+            }
+
+            while(visiteds.Count > 0)
+            {
+                int p = visiteds.Pop();
+                CellTest c = World.Cells.OneDimensional[pos];
+                (c.UnVisitMethods - c.TeleportUnVisit).Invoke(ref playerPos, ref node);
+            }
+
+        }*/
+    }
+
+    public void DecreaserVisit(ref int playerPos, ref TreeNode node)
+    {
+
+        if(World.CellGroups != null)
+        {
+
+            WorldTester w = World;
+
+            int[] AffectedCellGroup = w.CellGroups[Data.AffectedCellGroup];
+
+            //for tracking how sum of group changes
+            (int, int) sumsOld = (0, 0), sumsNew = (0, 0);
+
+            //for every element of group, save old sum(s), change Number1 value, new sum(s) and redraw the cell
+            for (int i = 0; i < AffectedCellGroup.Length; i++)
+            {
+
+                CellTest cell = w.Cells.OneDimensional[AffectedCellGroup[i]];
+
+                if ((cell.Data.Type & CellData.CellType.Default) == CellData.CellType.Default)
+                {
+                    sumsOld.Item1 += cell.Data.Number1 > 0 ? cell.Data.Number1 : 0;
+                }
+
+                if ((cell.Data.Type & CellData.CellType.ReachCell) == CellData.CellType.ReachCell)
+                {
+                    sumsOld.Item2 += cell.Data.Number1 > 0 ? cell.Data.Number1 : 0;
+                }
+
+                cell.Data.Number1 += Data.Number3;
+
+                if ((cell.Data.Type & CellData.CellType.Default) == CellData.CellType.Default)
+                {
+                    sumsNew.Item1 += cell.Data.Number1 > 0 ? cell.Data.Number1 : 0;
+                }
+
+                if ((cell.Data.Type & CellData.CellType.ReachCell) == CellData.CellType.ReachCell)
+                {
+                    sumsNew.Item2 += cell.Data.Number1 > 0 ? cell.Data.Number1 : 0;
+                }
+
+            }
+
+            w.Sum += (sumsNew.Item1 - sumsOld.Item1);
+
+            //w.ReachCellSum += (sumsNew.Item2 - sumsOld.Item2);
+
+        }
+
+    }
+
+    public void DecreaserUnVisit(ref int playerPos, ref TreeNode node)
+    {
+
+        WorldTester w = World;
+
+        if (w.CellGroups != null)
+        {
+
+            //increaser can only increase existing cell groups
+            if (Data.AffectedCellGroup < 0 || Data.AffectedCellGroup >= w.CellGroups.Length)
+                return;
+
+            //get belonging cell group
+            int[] AffectedCellGroup = w.CellGroups[Data.AffectedCellGroup];
+
+            //for tracking how sum of group changes
+            (int, int) sumsOld = (0, 0), sumsNew = (0, 0);
+
+            //for every element of group, save old sum(s), change (revert) Number1 value, new sum(s) and redraw the cell
+            for (int i = 0; i < AffectedCellGroup.Length; i++)
+            {
+
+                CellTest cell = w.Cells.OneDimensional[AffectedCellGroup[i]];
+
+                if ((cell.Data.Type & CellData.CellType.Default) == CellData.CellType.Default)
+                {
+                    sumsOld.Item1 += cell.Data.Number1 > 0 ? cell.Data.Number1 : 0;
+                }
+
+                if ((cell.Data.Type & CellData.CellType.ReachCell) == CellData.CellType.ReachCell)
+                {
+                    sumsOld.Item2 += cell.Data.Number1 > 0 ? cell.Data.Number1 : 0;
+                }
+
+                cell.Data.Number1 -= Data.Number3;
+
+                if ((cell.Data.Type & CellData.CellType.Default) == CellData.CellType.Default)
+                {
+                    sumsNew.Item1 += cell.Data.Number1 > 0 ? cell.Data.Number1 : 0;
+                }
+
+                if ((cell.Data.Type & CellData.CellType.ReachCell) == CellData.CellType.ReachCell)
+                {
+                    sumsNew.Item2 += cell.Data.Number1 > 0 ? cell.Data.Number1 : 0;
+                }
+
+            }
+
+            //revert sum changes
+
+            w.Sum += (sumsNew.Item1 - sumsOld.Item1);
+
+            //w.ReachCellSum += (sumsNew.Item2 - sumsOld.Item2);
+
+        }
 
     }
 
@@ -206,18 +371,8 @@ public class WorldTester
 
         CalculateSums();
     }
-    
-    public void Visit(TreeNode position, int direction)
-    {
 
-    }
-
-    public void UnVisit(TreeNode position)
-    {
-
-    }
-
-    //TODO: add reach sum
+    //TODO: add reach sum - not needed for final project
     void CalculateSums()
     {
         Sum = 0;
@@ -244,7 +399,8 @@ public class WorldTester
         WorldData old = GameEditor.main.LevelData;
 
         int startPosition = Data.CellDatas.getIndex(Data.PlayerStartPosition);
-        int[] position = new int[2];
+        int[] position = new int[2]; 
+        int positionInt;
         CalculateSums();
 
         Tree = new TreeNode(Cells.OneDimensional[startPosition], null, startPosition);
@@ -262,6 +418,7 @@ public class WorldTester
             //Debug.Log("Open: " + string.Join(", ", open));
             TreeNode current = open.Pop();
             Cells.getCoordsNonAlloc(current.Position, ref position);
+            positionInt = Cells.getIndex(position);
 
             //Debug.Log("Pos: " + string.Join(", ", position) + " Cells state: " + Cells);
 
@@ -274,7 +431,7 @@ public class WorldTester
                 Debug.Log("Going back");
                 yield return null;
 
-                previous.Cell.UnVisit();
+                previous.Cell.UnVisit(ref positionInt, ref current);
                 previous.ClearChildren();
                 previous = previous.Parent;
 
@@ -285,7 +442,7 @@ public class WorldTester
 
             //can't visit the root node state
             if (current.Parent != null)
-                current.Cell.Visit();
+                current.Cell.Visit(ref positionInt, ref current);
 
             UpdateView();
 
@@ -389,6 +546,7 @@ public class WorldTester
     {
         int startPosition = Data.CellDatas.getIndex(Data.PlayerStartPosition);
         int[] position = new int[2];
+        int positionInt = startPosition;
         CalculateSums();
 
         Tree = new TreeNode(Cells.OneDimensional[startPosition], null, startPosition);
@@ -407,20 +565,21 @@ public class WorldTester
         {
             TreeNode current = open.Pop();
             Cells.getCoordsNonAlloc(current.Position, ref position);
+            positionInt = Cells.getIndex(position);
 
             //Debug.Log("Pos: " + string.Join(", ", position) + " Cells state: " + Cells);
 
             //visit all the way back if this state (cell) belongs to other branch (clear tree for memory)
             while (previous != current.Parent)
             {
-                previous.Cell.UnVisit();
+                previous.Cell.UnVisit(ref positionInt, ref current);
                 previous.ClearChildren();
                 previous = previous.Parent;
             }
 
             //can't visit the root node state
             if (current.Parent != null)
-                current.Cell.Visit();
+                current.Cell.Visit(ref positionInt, ref current);
 
             if(Sum < bestPath.sum)
             {
@@ -435,6 +594,7 @@ public class WorldTester
                 break;
             }
 
+            Cells.getCoordsNonAlloc(positionInt, ref position);
             position[0]++;
             if (CanVisit(0, position[0]) && Cells[position].Data.Number1 > 0)
             {
