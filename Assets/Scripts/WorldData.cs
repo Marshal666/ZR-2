@@ -23,6 +23,8 @@ public class WorldData
 
     public string LevelName;
 
+    public int TargetSum = 0;
+
     public GameTypes GameType = GameTypes.SumToZero;
 
     public int[] PlayerStartPosition;
@@ -52,8 +54,20 @@ public class WorldData
 
             LevelName = r.ReadLine();
 
+            string s2 = r.ReadLine(), gameTypeString;
+            MatchCollection mc = new Regex(@"Target=(\d+)", RegexOptions.Compiled | RegexOptions.IgnoreCase).Matches(s2);
+            if(mc.Count > 0)
+            {
+                TargetSum = int.Parse(mc[0].Groups[1].Value);
+                gameTypeString = r.ReadLine();
+            } else
+            {
+                gameTypeString = s2;
+            }
+
+
             //load game type
-            string gameTypeString = r.ReadLine();
+            //string gameTypeString = r.ReadLine();
 
             GameType = (WorldData.GameTypes)Enum.Parse(typeof(WorldData.GameTypes), gameTypeString);
 
@@ -169,6 +183,9 @@ public class WorldData
 
         StringBuilder sb = new StringBuilder();
         sb.Append(LevelName);
+        sb.Append(nl);
+        sb.Append("Target=");
+        sb.Append(TargetSum);
         sb.Append(nl);
         sb.Append(GameType.ToString());
         sb.Append(nl);

@@ -50,6 +50,8 @@ public class GameEditor : MonoBehaviour, IWorldRenderer
 
     public InputField levelNameEditorField;
 
+    public InputField targetSumField;
+
     public Text levelDimensionsText;
 
     public Button buttonTemplate;
@@ -370,6 +372,8 @@ public class GameEditor : MonoBehaviour, IWorldRenderer
                 data.Number2 = int.Parse(CellNumbersInputFields[1].text);
                 data.Number3 = -Mathf.Abs(int.Parse(CellNumbersInputFields[2].text));
                 data.AffectedCellGroup = int.Parse(CellNumbersInputFields[3].text);
+                int bt = int.Parse(CellNumbersInputFields[4].text);
+                data.BuildingType = bt < 0 ? 0 : (bt >= GameData.BuildingBlocks.Count ? GameData.BuildingBlocks.Count - 1 : bt);
             }
 
             //bools are always valid, only numbers need checking
@@ -530,6 +534,31 @@ public class GameEditor : MonoBehaviour, IWorldRenderer
         }
     }
 
+    public void EditTargetSum(int i)
+    {
+        if (i < 0)
+        {
+            i = 0;
+            targetSumField.text = "0";
+        }
+        LevelData.TargetSum = i;
+        string target = LevelData.TargetSum.ToString();
+    }
+
+    public void EditTargetSum(string s)
+    {
+        if(string.IsNullOrEmpty(s))
+        {
+            s = targetSumField.text;
+            if(string.IsNullOrEmpty(s))
+            {
+                targetSumField.text = LevelData.TargetSum.ToString();
+                return;
+            }
+        }
+        EditTargetSum(int.Parse(s));
+    }
+
     void EditingPlayer()
     {
 
@@ -683,6 +712,7 @@ public class GameEditor : MonoBehaviour, IWorldRenderer
 
             Cell cell = World.main.Cells.OneDimensional[currentCell.index];
 
+            cell.ClearDraw();
             cell.Redraw();
             cell.DrawAbove(ArrowSpawner.GetObject());
 
@@ -740,7 +770,7 @@ public class GameEditor : MonoBehaviour, IWorldRenderer
                 }
             }
 
-            int[] dint = { data.Number1, data.Number2, data.Number3, data.AffectedCellGroup };
+            int[] dint = { data.Number1, data.Number2, data.Number3, data.AffectedCellGroup, data.BuildingType };
             int mm = Mathf.Min(dint.Length, CellNumbersInputFields.Length);
 
             for(int i = 0; i < mm; i++)
@@ -1007,6 +1037,9 @@ public class GameEditor : MonoBehaviour, IWorldRenderer
     {
         //print(EditorState.State + " " + currentCell);
         EditorState.Execute();
+
+        if (targetSumField.text != LevelData.TargetSum.ToString())
+            targetSumField.text = LevelData.TargetSum.ToString();
     }
 
     public string GroupStatesString()
@@ -1053,23 +1086,22 @@ public class GameEditor : MonoBehaviour, IWorldRenderer
 
     IEnumerator testerE = null;
 
-    public void TestLevel()
-    {
-        if (testerE == null)
-        {
-            WorldTester tester = new WorldTester(LevelData);
-            testerE = tester.BuildTreeSteps();
-        } 
-        if(!testerE.MoveNext())
-        {
-            testerE = null;
-        }
-        
-    }
+    //public void TestLevel()
+    //{
+    //    if (testerE == null)
+    //    {
+    //        WorldTester tester = new WorldTester(LevelData);
+    //        testerE = tester.BuildTreeSteps();
+    //    } 
+    //    if(!testerE.MoveNext())
+    //    {
+    //        testerE = null;
+    //    }
+    //}
 
     Thread testThread = null;
 
-    public void TestLevelFast()
+    public void TestLevelFast(string algorithm)
     {
         if(testerE != null)
         {
@@ -1082,17 +1114,44 @@ public class GameEditor : MonoBehaviour, IWorldRenderer
             testThread = null;
         if (testThread == null)
         {
-            testThread = new Thread(new ThreadStart(StartThread));
+
+            ThreadStart s;
+            
+            switch(algorithm.ToLower())
+            {
+                case "dfss":
+                    s = StartThreadDFSS;
+                    break;
+                default:
+                    s = StartThreadDFS;
+                    break;
+            }
+
+            testThread = new Thread(s);
             testThread.Start();
 
-            void StartThread()
+            void StartThreadDFS()
             {
-                print("Thread started");
+                print("Thread started DFS");
                 WorldTester tester = new WorldTester(LevelData);
-                tester.BuildTree();
+                var l = tester.BuildTree();
+                EditTargetSum(l.Item2);
+                Scene.main.SolutionBuffer = (LevelData.LevelName, l.Item2, l.Item1);
             }
+
+            void StartThreadDFSS()
+            {
+                print("Thread started DFSS");
+                WorldTester tester = new WorldTester(LevelData);
+                var l = tester.BuildTreeSelective();
+                EditTargetSum(l.Item2);
+                Scene.main.SolutionBuffer = (LevelData.LevelName, l.Item2, l.Item1);
+            }
+
         }
     }
+
+    
 
     public void RenderPositionChanges()
     {

@@ -118,6 +118,36 @@ public class CellTest
         
     }
 
+    public int PeekVisit(ref int playerPos, ref TreeNode node)
+    {
+        int s = 0;
+        int po = playerPos;
+        TreeNode no = node;
+
+        playerPos = node.Position;
+
+        VisitMethods.Invoke(ref playerPos, ref node);
+        s = World.Sum;
+
+        TreeNode tn = node;
+
+        while(tn != no)
+        {
+            tn.Cell.UnVisit(ref playerPos, ref node);
+            tn.ClearChildren();
+            tn = tn.Parent;
+        }
+
+        node = no;
+        
+        UnVisitMethods.Invoke(ref playerPos, ref node);
+
+        playerPos = po;
+        node = no;
+
+        return s;
+    }
+
     public void Visit(ref int playerPos, ref TreeNode node)
     {
         VisitMethods.Invoke(ref playerPos, ref node);
@@ -542,12 +572,16 @@ public class WorldTester
 
     }
 
-    public void BuildTree()
+    public (List<int>, int) BuildTree()
     {
         int startPosition = Data.CellDatas.getIndex(Data.PlayerStartPosition);
         int[] position = new int[2];
         int positionInt = startPosition;
         CalculateSums();
+        int startSum = Sum;
+        List<int> ret = new List<int>();
+        System.Diagnostics.Stopwatch s = new System.Diagnostics.Stopwatch();
+        s.Start();
 
         Tree = new TreeNode(Cells.OneDimensional[startPosition], null, startPosition);
 
@@ -627,6 +661,8 @@ public class WorldTester
 
         }
 
+        s.Stop();
+        ret = bestPath.path;
         if(done)
         {
             Debug.Log("Zero sum found! Score: " + (bestPath.path.Count - 1));
@@ -643,6 +679,7 @@ public class WorldTester
             pathS.Append(string.Join(", ", Cells.getCoords(path[path.Count - 1])));
             pathS.Append("}");
             Debug.Log("Path: " + pathS.ToString());
+            Debug.Log("Elapsed: " + s.Elapsed.TotalSeconds);
         } else
         {
             Debug.Log("No zero sum found! Best sum is: " + bestPath.sum + " Score: " + (bestPath.path.Count - 1));
@@ -659,8 +696,159 @@ public class WorldTester
             pathS.Append(string.Join(", ", Cells.getCoords(path[path.Count - 1])));
             pathS.Append("}");
             Debug.Log("Path: " + pathS.ToString());
+            Debug.Log("Elapsed: " + s.Elapsed.TotalSeconds);
+        }
+        return (ret, startSum - bestPath.sum);
+        bool CanVisit(int dim, int move)
+        {
+            return move >= 0 && move < Cells.Dimensions[dim];
+        }
+    }
+
+    public (List<int>, int) BuildTreeSelective()
+    {
+        int startPosition = Data.CellDatas.getIndex(Data.PlayerStartPosition);
+        int[] position = new int[2];
+        int positionInt = startPosition;
+        CalculateSums();
+        int startSum = Sum;
+        List<int> ret = new List<int>();
+        System.Diagnostics.Stopwatch s = new System.Diagnostics.Stopwatch();
+        s.Start();
+
+        Tree = new TreeNode(Cells.OneDimensional[startPosition], null, startPosition);
+
+        Stack<TreeNode> open = new Stack<TreeNode>();
+        open.Push(Tree);
+
+        bool done = false;
+        TreeNode doneNode = Tree;
+
+        TreeNode previous = null;
+
+        (int sum, List<int> path) bestPath = (int.MaxValue, null);
+
+        List<(int, TreeNode)> nds = new List<(int, TreeNode)>();
+
+        while (open.Count > 0)
+        {
+            TreeNode current = open.Pop();
+            Cells.getCoordsNonAlloc(current.Position, ref position);
+            positionInt = Cells.getIndex(position);
+
+            //Debug.Log("Pos: " + string.Join(", ", position) + " Cells state: " + Cells);
+
+            //visit all the way back if this state (cell) belongs to other branch (clear tree for memory)
+            while (previous != current.Parent)
+            {
+                previous.Cell.UnVisit(ref positionInt, ref current);
+                previous.ClearChildren();
+                previous = previous.Parent;
+            }
+
+            //can't visit the root node state
+            if (current.Parent != null)
+                current.Cell.Visit(ref positionInt, ref current);
+
+            if (Sum < bestPath.sum)
+            {
+                bestPath.sum = Sum;
+                bestPath.path = RetrackPath(current);
+            }
+
+            if (Sum == 0)
+            {
+                done = true;
+                doneNode = current;
+                break;
+            }
+
+            Cells.getCoordsNonAlloc(positionInt, ref position);
+
+            nds.Clear();
+
+            position[0]++;
+            if (CanVisit(0, position[0]) && Cells[position].Data.Number1 > 0)
+            {
+                current.Right = new TreeNode(Cells[position], current, Cells.getIndex(position));
+                int sd = current.Right.Cell.PeekVisit(ref positionInt, ref current.Right);
+                nds.Add((sd, current.Right));
+                //open.Push(current.Right);
+            }
+            position[0] -= 2;
+            if (CanVisit(0, position[0]) && Cells[position].Data.Number1 > 0)
+            {
+                current.Left = new TreeNode(Cells[position], current, Cells.getIndex(position));
+                int sd = current.Left.Cell.PeekVisit(ref positionInt, ref current.Left);
+                nds.Add((sd, current.Left));
+                //open.Push(current.Left);
+            }
+            position[0]++;
+
+            position[1]++;
+            if (CanVisit(1, position[1]) && Cells[position].Data.Number1 > 0)
+            {
+                current.Up = new TreeNode(Cells[position], current, Cells.getIndex(position));
+                int sd = current.Up.Cell.PeekVisit(ref positionInt, ref current.Up);
+                nds.Add((sd, current.Up));
+                //open.Push(current.Up);
+            }
+            position[1] -= 2;
+            if (CanVisit(1, position[1]) && Cells[position].Data.Number1 > 0)
+            {
+                current.Down = new TreeNode(Cells[position], current, Cells.getIndex(position));
+                int sd = current.Down.Cell.PeekVisit(ref positionInt, ref current.Down);
+                nds.Add((sd, current.Down));
+                //open.Push(current.Down);
+            }
+            position[1]++;
+
+            nds.Sort(((int, TreeNode) a, (int, TreeNode) b) => { return -(a.Item1 - b.Item1); });
+            foreach (var n in nds) open.Push(n.Item2);
+
+            previous = current;
+
         }
 
+        s.Stop();
+        ret = bestPath.path;
+        if (done)
+        {
+            Debug.Log("Zero sum found! Score: " + (bestPath.path.Count - 1));
+            List<int> path = bestPath.path;
+            path.Reverse();
+            StringBuilder pathS = new StringBuilder(1024);
+            for (int i = 0; i < path.Count - 1; i++)
+            {
+                pathS.Append("{");
+                pathS.Append(string.Join(", ", Cells.getCoords(path[i])));
+                pathS.Append("}, "); ;
+            }
+            pathS.Append("{");
+            pathS.Append(string.Join(", ", Cells.getCoords(path[path.Count - 1])));
+            pathS.Append("}");
+            Debug.Log("Path: " + pathS.ToString());
+            Debug.Log("Elapsed: " + s.Elapsed.TotalSeconds);
+        }
+        else
+        {
+            Debug.Log("No zero sum found! Best sum is: " + bestPath.sum + " Score: " + (bestPath.path.Count - 1));
+            List<int> path = bestPath.path;
+            path.Reverse();
+            StringBuilder pathS = new StringBuilder(1024);
+            for (int i = 0; i < path.Count - 1; i++)
+            {
+                pathS.Append("{");
+                pathS.Append(string.Join(", ", Cells.getCoords(path[i])));
+                pathS.Append("}, "); ;
+            }
+            pathS.Append("{");
+            pathS.Append(string.Join(", ", Cells.getCoords(path[path.Count - 1])));
+            pathS.Append("}");
+            Debug.Log("Path: " + pathS.ToString());
+            Debug.Log("Elapsed: " + s.Elapsed.TotalSeconds);
+        }
+        return (ret, startSum - bestPath.sum);
         bool CanVisit(int dim, int move)
         {
             return move >= 0 && move < Cells.Dimensions[dim];

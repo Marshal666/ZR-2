@@ -22,6 +22,7 @@ public class Scene : MonoBehaviour
     public GameObject WonObjects = null;
     public GameObject LostObjects = null;
     public GameObject EditorObjects = null;
+    public GameObject PlayingObjects = null;
 
     public GameObject MessageBox = null;
     public Text MessageBoxTitle = null;
@@ -129,6 +130,25 @@ public class Scene : MonoBehaviour
 
     public static UnityEngine.EventSystems.EventSystem UIEventSystem { get { return main.uiEventSystem; } }
 
+    public (string LevelName, int StartSum, List<int> Steps) SolutionBuffer = default;
+    public bool HasSolutionForUse
+    {
+        get
+        {
+            if (SolutionBuffer.LevelName == null || SolutionBuffer.Steps == null)
+                return false;
+            if (World.main.Data.LevelName != SolutionBuffer.LevelName)
+                return false;
+            if (World.main.Sum != SolutionBuffer.StartSum)
+                return false;
+            if (SolutionBuffer.Steps.Count <= 0)
+                return false;
+            if (World.main.Data.CellDatas.getIndex(Player.CurrentPosition) != SolutionBuffer.Steps[0])
+                return false;
+            return true;
+        }
+    }
+
     /// <summary>
     /// Script init
     /// </summary>
@@ -231,7 +251,9 @@ public class Scene : MonoBehaviour
             return;
         for (int i = t.childCount - 1; i >= 0; i--)
         {
-            Destroy(t.GetChild(i).gameObject);
+            Transform c = t.GetChild(i);
+            c.parent = null;
+            Destroy(c.gameObject);
         }
     }
 
@@ -305,6 +327,7 @@ public class Scene : MonoBehaviour
         WonObjects.SetActive(false);
         LostObjects.SetActive(false);
         EditorObjects.SetActive(false);
+        PlayingObjects.SetActive(false);
 
         //disable message box
         MessageBox.SetActive(false);
@@ -493,6 +516,11 @@ public class Scene : MonoBehaviour
             return;
         }
 
+        if(InputMapper.main.PasteBuffer && HasSolutionForUse)
+        {
+            Player.ExecuteSteps(SolutionBuffer.Steps.GetEnumerator());
+        }
+
         if (InputMapper.main.Undo)
         {
             Events.Undo();
@@ -547,6 +575,7 @@ public class Scene : MonoBehaviour
     void Menu2Playing()
     {
         DisableUI();
+        PlayingObjects.SetActive(true);
 
         playerC.WorldIn = World.main.Cells;
         playerC.WorldRenderer = World.main;
@@ -586,6 +615,7 @@ public class Scene : MonoBehaviour
         playerCameraC.CameraState.SwitchState(PlayerCamera.PlayerCameraStates.FollowPlayer);
 
         DisableUI();
+        PlayingObjects.SetActive(true);
     }
 
     void Playing2WonLost()
@@ -623,6 +653,7 @@ public class Scene : MonoBehaviour
         GameEditor.main.enabled = true;
         DisableUI();
         EditorObjects.SetActive(true);
+        SolutionBuffer = default;
         GameEditor.main.Init();
         playerCameraC.CameraState.SwitchState(PlayerCamera.PlayerCameraStates.EditorLookAtWorld);
     }

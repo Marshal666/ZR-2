@@ -50,6 +50,8 @@ public class Player : MonoBehaviour
     /// </summary>
     public IWorldRenderer WorldRenderer;
 
+    public IEnumerator<int> Steps = null;
+
     #region EVENTCLASSES
 
     /// <summary>
@@ -159,11 +161,61 @@ public class Player : MonoBehaviour
 
     #region STATE_METHODS
 
+    float executionSpeed = 0.75f;
+    public void SetExecutionSpeed(float f) => executionSpeed = f;
+
+    public void ExecuteSteps(IEnumerator<int> s)
+    {
+        if (Steps != null)
+            return;
+        Steps = s;
+        StartCoroutine(ExecuteStepsCor());
+    }
+
+    IEnumerator ExecuteStepsCor()
+    {
+        while(Steps != null && Steps.MoveNext())
+        {
+            int c = Steps.Current;
+            int[] cords = World.main.Cells.getCoords(c);
+
+            Vector2Int movement = new Vector2Int();
+
+            if (cords.Length > 0)
+                movement.x = cords[0] - CurrentPosition[0];
+
+            if (cords.Length > 1)
+                movement.y = cords[1] - CurrentPosition[1];
+
+            bool doing = false;
+
+            if (movement.x != 0)
+            {
+                doing |= Scene.EventSystem.AddEvent(new PlayerMove(this, 0, movement.x));
+            }
+
+            if (movement.y != 0)
+            {
+                doing |= Scene.EventSystem.AddEvent(new PlayerMove(this, 1, movement.y));
+            }
+
+            if (!doing)
+                continue;
+
+            yield return new WaitForSeconds(executionSpeed);
+        }
+        Steps = null;
+        yield break;
+    }
+
     /// <summary>
     /// Playing state method, called every frame
     /// </summary>
     void Playing()
     {
+
+        if (Steps != null)
+            return;
 
         //moving for 1st and 2nd dimension is special case because of camera rotation
         Vector2Int movement = new Vector2Int();
@@ -327,6 +379,7 @@ public class Player : MonoBehaviour
 
     public void ResetToDefault()
     {
+        Steps = null;
         transform.position = Vector3.zero;
         transform.rotation = Quaternion.identity;
         if (PlayerState.State != PlayerStates.NonPlaying)

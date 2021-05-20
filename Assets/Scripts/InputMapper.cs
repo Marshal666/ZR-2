@@ -56,6 +56,8 @@ public class InputMapper : MonoBehaviour
 
     public bool CellIncrease, CellDecrease;
 
+    public bool PasteBuffer;
+
     private void Awake()
     {
         main = this;
@@ -106,6 +108,8 @@ public class InputMapper : MonoBehaviour
 
         CellIncrease = Input.GetKeyDown(CellIncreaseKey) & Input.GetKey(CellActionKey);
         CellDecrease = Input.GetKeyDown(CellDecreaseKey) & Input.GetKey(CellActionKey);
+
+        PasteBuffer = Input.GetKey(KeyCode.LeftControl) & Input.GetKeyDown(KeyCode.V);
 
         if(EditorHover)
         {

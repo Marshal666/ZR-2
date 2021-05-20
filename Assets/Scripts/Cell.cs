@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -152,6 +153,11 @@ public class Cell : MonoBehaviour
             Zero.SetActive(true);
         }
 
+    }
+
+    public void ClearDraw()
+    {
+        Scene.ClearChildren(Positives.transform);
     }
 
     public void DrawPreview(int newNumber1)

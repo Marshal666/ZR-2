@@ -27,11 +27,11 @@ public class EventSystem
 
     }
 
-    public void AddEvent(IGameEvent e)
+    public bool AddEvent(IGameEvent e)
     {
 
         if (e.Result == GameEventExecutionResult.Failed)
-            return;
+            return false;
 
         Events[currentPos] = e;
 
@@ -62,6 +62,8 @@ public class EventSystem
                 doneCount = count;
 
         }
+
+        return true;
 
     }
 

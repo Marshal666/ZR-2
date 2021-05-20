@@ -25,7 +25,17 @@ public class World : MonoBehaviour, IWorldRenderer
 
     public float BuildingDistance { get { return buildingDistance; } set { buildingDistance = value; } }
 
-    public int Sum = 0;
+    int sum = 0;
+    public int Sum {
+        get => sum;
+        set
+        {
+            sum = value;
+            OnSumChange?.Invoke(sum);
+        }
+    }
+
+    public Action<int> OnSumChange;
 
     public int ReachCellSum = 0;
 
@@ -123,10 +133,11 @@ public class World : MonoBehaviour, IWorldRenderer
         //index of current cell for reading cell info from file
         int ci = 0;
 
-        Sum = 0;
+        Sum = data.TargetSum;
         ReachCellSum = 0;
 
         //place cells in their dimension objects
+        bool sz = Sum == 0;
         while (qq.Count != 0)
         {
             (int dimindex, Transform parent) = qq.Dequeue();
@@ -175,7 +186,7 @@ public class World : MonoBehaviour, IWorldRenderer
                         case WorldData.GameTypes.SumToZero:
                             if (Cells.OneDimensional[ci].Data.Number1 > 0 &&
                                 (Cells.OneDimensional[ci].Data.Type & CellData.CellType.ReachCell) != CellData.CellType.ReachCell &&
-                                (Cells.OneDimensional[ci].Data.Type & CellData.CellType.Default) == CellData.CellType.Default)
+                                (Cells.OneDimensional[ci].Data.Type & CellData.CellType.Default) == CellData.CellType.Default && sz)
                                 Sum += Cells.OneDimensional[ci].Data.Number1;
                             break;
                         case WorldData.GameTypes.ReachPoints:
@@ -194,6 +205,9 @@ public class World : MonoBehaviour, IWorldRenderer
                 }
             }
         }
+
+        //refresh sum label
+        Sum = Sum;
 
         //position player
         Scene.Player.CurrentPosition = new int[data.PlayerStartPosition.Length];
