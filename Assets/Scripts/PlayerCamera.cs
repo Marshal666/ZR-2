@@ -229,6 +229,12 @@ public class PlayerCamera : MonoBehaviour
 
     Vector3 smoothDampAngles(Vector3 s, Vector3 e, ref Vector3 v, float t)
     {
+        if (float.IsNaN(v.x) || float.IsInfinity(v.x))
+            v.x = 0;
+        if (float.IsNaN(v.y) || float.IsInfinity(v.y))
+            v.y = 0;
+        if (float.IsNaN(v.z) || float.IsInfinity(v.z))
+            v.z = 0;
         return new Vector3(Mathf.SmoothDampAngle(s.x, e.x, ref v.x, t),
                             Mathf.SmoothDampAngle(s.y, e.y, ref v.y, t),
                             Mathf.SmoothDampAngle(s.z, e.z, ref v.z, t));

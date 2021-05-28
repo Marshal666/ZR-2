@@ -752,13 +752,14 @@ public class Cell : MonoBehaviour
                 arrowPointer = Instantiate(GameData.ArrowObject);
                 arrowPointer.transform.SetParent(Scene.RootTransform);
             }
-            else
+            else if (!arrowPointer.activeSelf)
             {
                 arrowPointer.SetActive(true);
             }
+            else return;
             Cell t = World.main.Cells.OneDimensional[Data.Number2];
             t.DrawAbove(arrowPointer);
-            if (t != this)
+            if (t != this && !t.BeingPreviewed)
             {
                 //recursive way..
                 t.PreviewChanges?.Invoke();
@@ -772,7 +773,9 @@ public class Cell : MonoBehaviour
         {
             if (arrowPointer)
             {
-                arrowPointer.SetActive(false);
+                if (arrowPointer.activeSelf)
+                    arrowPointer.SetActive(false);
+                else return;
             }
             Cell t = World.main.Cells.OneDimensional[Data.Number2];
             t.DrawAbove(arrowPointer);
