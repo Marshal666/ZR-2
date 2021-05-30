@@ -1040,6 +1040,12 @@ public class GameEditor : MonoBehaviour, IWorldRenderer
 
         if (targetSumField.text != LevelData.TargetSum.ToString())
             targetSumField.text = LevelData.TargetSum.ToString();
+
+        if(AlgorithmDone != null)
+        {
+            Scene.main.ShowMessageBox(AlgorithmDone + " is done!");
+            AlgorithmDone = null;
+        }
     }
 
     public string GroupStatesString()
@@ -1100,6 +1106,7 @@ public class GameEditor : MonoBehaviour, IWorldRenderer
     //}
 
     Thread testThread = null;
+    string AlgorithmDone = null;
 
     public void TestLevelFast(string algorithm)
     {
@@ -1137,6 +1144,7 @@ public class GameEditor : MonoBehaviour, IWorldRenderer
                 var l = tester.BuildTree();
                 EditTargetSum(l.Item2);
                 Scene.main.SolutionBuffer = (LevelData.LevelName, l.Item2, l.Item1);
+                AlgorithmDone = "DFS";
             }
 
             void StartThreadDFSS()
@@ -1146,6 +1154,7 @@ public class GameEditor : MonoBehaviour, IWorldRenderer
                 var l = tester.BuildTreeSelective();
                 EditTargetSum(l.Item2);
                 Scene.main.SolutionBuffer = (LevelData.LevelName, l.Item2, l.Item1);
+                AlgorithmDone = "DFSS";
             }
 
         }
