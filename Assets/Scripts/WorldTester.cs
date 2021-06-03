@@ -572,7 +572,7 @@ public class WorldTester
 
     }
 
-    public (List<int>, int) BuildTree()
+    public (List<int>, int) BuildTree(out double elapsed)
     {
         int startPosition = Data.CellDatas.getIndex(Data.PlayerStartPosition);
         int[] position = new int[2];
@@ -662,6 +662,7 @@ public class WorldTester
         }
 
         s.Stop();
+        elapsed = s.Elapsed.TotalSeconds;
         ret = bestPath.path;
         if(done)
         {
@@ -705,7 +706,7 @@ public class WorldTester
         }
     }
 
-    public (List<int>, int) BuildTreeSelective()
+    public (List<int>, int) BuildTreeSelective(out double elapsed)
     {
         int startPosition = Data.CellDatas.getIndex(Data.PlayerStartPosition);
         int[] position = new int[2];
@@ -811,6 +812,7 @@ public class WorldTester
         }
 
         s.Stop();
+        elapsed = s.Elapsed.TotalSeconds;
         ret = bestPath.path;
         if (done)
         {

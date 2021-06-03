@@ -1043,7 +1043,7 @@ public class GameEditor : MonoBehaviour, IWorldRenderer
 
         if(AlgorithmDone != null)
         {
-            Scene.main.ShowMessageBox(AlgorithmDone + " is done!");
+            Scene.main.ShowMessageBox("Algorithm done: " + AlgorithmDone);
             AlgorithmDone = null;
         }
     }
@@ -1141,20 +1141,22 @@ public class GameEditor : MonoBehaviour, IWorldRenderer
             {
                 print("Thread started DFS");
                 WorldTester tester = new WorldTester(LevelData);
-                var l = tester.BuildTree();
+                double elapsed;
+                var l = tester.BuildTree(out elapsed);
                 EditTargetSum(l.Item2);
                 Scene.main.SolutionBuffer = (LevelData.LevelName, l.Item2, l.Item1);
-                AlgorithmDone = "DFS";
+                AlgorithmDone = "DFS\nTime: " + elapsed;
             }
 
             void StartThreadDFSS()
             {
                 print("Thread started DFSS");
                 WorldTester tester = new WorldTester(LevelData);
-                var l = tester.BuildTreeSelective();
+                double elapsed;
+                var l = tester.BuildTreeSelective(out elapsed);
                 EditTargetSum(l.Item2);
                 Scene.main.SolutionBuffer = (LevelData.LevelName, l.Item2, l.Item1);
-                AlgorithmDone = "DFSS";
+                AlgorithmDone = "DFSS\nTime: " + elapsed;
             }
 
         }
