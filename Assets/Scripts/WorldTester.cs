@@ -261,6 +261,9 @@ public class CellTest
 
             WorldTester w = World;
 
+            if (World.CellGroups == null || World.CellGroups.Length <= 0 || Data.AffectedCellGroup >= World.CellGroups.Length)
+                return;
+
             int[] AffectedCellGroup = w.CellGroups[Data.AffectedCellGroup];
 
             //for tracking how sum of group changes
